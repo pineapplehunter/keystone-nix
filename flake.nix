@@ -3,100 +3,103 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+    systems.url = "github:nix-systems/default";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  nixConfig = {
+    extra-substituters = [ "https://keystone-nix.cachix.org" ];
+    extra-trusted-public-keys = [
+      "keystone-nix.cachix.org-1:I0zDDsziHqpZDmrNp4mTJGj77AroVJj91IMFZVFEJt8="
+    ];
   };
 
   outputs =
-    { nixpkgs, self }:
-    let
-      pkgsForSystem = system: import nixpkgs { inherit system; };
-      inherit (nixpkgs) lib;
-    in
     {
+      nixpkgs,
+      self,
+      treefmt-nix,
+      flake-utils,
+      systems,
+    }:
+    flake-utils.lib.eachSystem ((import systems) ++ [ "riscv64-linux" ]) (
+      system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+        crossPkgs = pkgs.pkgsCross.riscv64;
+        crossPkgsEmbedded = pkgs.pkgsCross.riscv64-embedded;
+        inherit (nixpkgs) lib;
 
-      packages.x86_64-linux.default =
-        (pkgsForSystem "x86_64-linux").linuxPackages.callPackage ./package.nix
-          { };
-      packages.riscv64-linux.default =
-        (pkgsForSystem "riscv64-linux").linuxPackages.callPackage ./package.nix
-          { };
-      packages.rvcross = rec {
-        default = bootrom;
-        driver =
-          (pkgsForSystem "x86_64-linux").pkgsCross.riscv64.linuxPackages.callPackage
-            ./keystone-driver/package.nix
-            { };
-        bootrom =
-          (pkgsForSystem "x86_64-linux").pkgsCross.riscv64-embedded.callPackage ./keystone-bootrom/package.nix
-            { };
-        sm =
-          (pkgsForSystem "x86_64-linux").pkgsCross.riscv64.callPackage ./keystone-sm/package.nix
-            { };
-      };
-
-      packages.x86_64-linux.qemu-run =
-        let
-          systemPkg = self.nixosConfiguration.sample.config.system.build.toplevel;
-          imgPkg = self.nixosConfiguration.sample.config.system.build.sdImage;
-          romPkg = self.packages.rvcross.bootrom;
-          pkgs = (pkgsForSystem "x86_64-linux");
-          crossPkgs = pkgs.pkgsCross.riscv64;
-          qemu =
-            (pkgs.qemu.override {
-              hostCpuTargets = [ "riscv64-softmmu" ];
-            }).overrideAttrs
-              {
-                patches = [
-                  ./qemu.patch
-                ];
-              };
-        in
-        pkgs.writeShellScriptBin "qemu-run" ''
-          zstd -f -d ${imgPkg}/sd-image/nixos*.img.zst -o /tmp/riscv-nixos.img
-          chmod +w /tmp/riscv-nixos.img
-          ${qemu}/bin/qemu-system-riscv64 \
-            -m 2G \
-            -machine virt,rom=${romPkg}/bootrom.bin \
-            -bios ${crossPkgs.opensbi}/share/opensbi/lp64/generic/firmware/fw_jump.bin \
-            -kernel ${systemPkg}/kernel \
-            -drive file=/tmp/riscv-nixos.img,format=raw \
-            -nographic \
-            -initrd ${systemPkg}/initrd \
-            -append "init=${systemPkg}/init" \
-            "$@"
-        '';
-      # -bios ${./fw_jump.elf} \
-
-      nixosConfiguration.sample = lib.nixosSystem {
-        system = null;
-        modules = [
-          {
-            nixpkgs.localSystem.system = "x86_64-linux";
-            nixpkgs.crossSystem.system = "riscv64-linux";
-          }
-          (nixpkgs + /nixos/modules/installer/sd-card/sd-image-riscv64-qemu.nix)
-          (
-            { config, pkgs, ... }:
+        osConfiguration = lib.nixosSystem {
+          system = null;
+          modules = [
             {
-              boot = {
-                extraModulePackages = [
-                  (config.boot.kernelPackages.callPackage ./keystone-driver/package.nix { })
-                ];
-                # kernelModules = [ "keystone-driver" ];
-              };
-              documentation.enable = false;
-              system.stateVersion = config.system.nixos.release;
-              environment.systemPackages = with pkgs; [
-                # fd
-                # htop
-                # fastfetch
-                file
-              ];
-              users.users.root.initialHashedPassword = "$y$j9T$OyOB1AEyqQTmJw.Ahh2hS0$DD4g89KLJFsLi4PPbHg4kpeNxZ2RHJSA8Hp6.tmta24";
-              networking.firewall.enable = false;
+              nixpkgs.localSystem.system = system;
+              nixpkgs.crossSystem.system = "riscv64-linux";
             }
-          )
-        ];
-      };
+            ./configuration.nix
+          ];
+        };
+      in
+      {
+        packages = {
+          default = self.packages.${system}.qemu-run;
+          driver = crossPkgs.linuxPackages.callPackage ./keystone-driver/package.nix { };
+          bootrom = crossPkgsEmbedded.callPackage ./keystone-bootrom/package.nix { };
+          sm = crossPkgs.callPackage ./keystone-sm/package.nix { };
+          sdImage = osConfiguration.config.system.build.sdImage;
+          systemConfig = osConfiguration.config.system.build.toplevel;
+          qemu-run =
+            let
+              systemPkg = osConfiguration.config.system.build.toplevel;
+              imgPkg = osConfiguration.config.system.build.sdImage;
+              romPkg = self.packages.${system}.bootrom;
+              qemu =
+                (pkgs.qemu.override {
+                  hostCpuTargets = [ "riscv64-softmmu" ];
+                }).overrideAttrs
+                  {
+                    patches = [
+                      ./qemu.patch
+                    ];
+                  };
+            in
+            pkgs.writeShellScriptBin "qemu-run" ''
+              TMP=$(mktemp --suffix=.img)
+              echo Extracting sd image file to $TMP
+              zstd -f -d ${imgPkg}/sd-image/nixos*.img.zst -o $TMP
+              chmod +w $TMP
 
-    };
+              cleanup(){
+                echo Removing $TMP
+                rm -f $TMP
+              }
+              trap cleanup
+
+              ${qemu}/bin/qemu-system-riscv64 \
+                -m 2G \
+                -machine virt,rom=${romPkg}/bootrom.bin \
+                -bios ${crossPkgs.opensbi}/share/opensbi/lp64/generic/firmware/fw_jump.bin \
+                -kernel ${systemPkg}/kernel \
+                -drive file=$TMP,format=raw \
+                -nographic \
+                -initrd ${systemPkg}/initrd \
+                -append "init=${systemPkg}/init" \
+                "$@"
+              cleanup
+            '';
+        };
+
+        formatter =
+          (treefmt-nix.lib.evalModule pkgs {
+            projectRootFile = "flake.nix";
+            programs.nixfmt.enable = true;
+          }).config.build.wrapper;
+      }
+
+    );
 }
