@@ -8,6 +8,12 @@
   imports = [
     "${modulesPath}/installer/sd-card/sd-image-riscv64-qemu.nix"
   ];
+
+  nix.settings.expermental-features = [
+    "nix-command"
+    "flakes"
+  ];
+
   boot = {
     extraModulePackages = [
       (config.boot.kernelPackages.callPackage ./keystone-driver/package.nix { })
