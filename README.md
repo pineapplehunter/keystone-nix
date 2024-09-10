@@ -28,5 +28,7 @@ $ nix run ".#bootrom"
 # TODO
 - [x] keystone-driver
 - [x] keystone-bootrom
+- [x] boot linux without firmware checking in opensbi
 - [ ] opensbi keystone patch
 - [ ] keystone eapps
+- [ ] boot linux with firmware check enabled

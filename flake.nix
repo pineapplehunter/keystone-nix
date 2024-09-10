@@ -81,7 +81,7 @@
                 echo Removing $TMP
                 rm -f $TMP
               }
-              trap cleanup
+              trap cleanup SIGINT
 
               ${qemu}/bin/qemu-system-riscv64 \
                 -m 2G \
