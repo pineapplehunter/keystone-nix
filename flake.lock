@@ -2,9 +2,7 @@
   "nodes": {
     "flake-utils": {
       "inputs": {
-        "systems": [
-          "systems"
-        ]
+        "systems": "systems"
       },
       "locked": {
         "lastModified": 1710146030,
@@ -40,7 +38,6 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
-        "systems": "systems",
         "treefmt-nix": "treefmt-nix"
       }
     },
