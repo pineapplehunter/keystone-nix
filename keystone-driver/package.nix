@@ -8,8 +8,8 @@ let
   KERNEL_DIR = "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build";
 in
 
-stdenv.mkDerivation rec {
-  name = "keystone-driver-${version}-${kernel.version}";
+stdenv.mkDerivation (finalAttrs: {
+  name = "keystone-driver-${finalAttrs.version}-${kernel.version}";
   version = "0-unstable";
 
   src = fetchFromGitHub {
@@ -19,42 +19,34 @@ stdenv.mkDerivation rec {
     hash = "sha256-bAJrWuuZaDR9hU3Wc8ZZ/l4NecriDMpLlY7f7kd/B8s=";
   };
 
+  nativeBuildInputs = kernel.moduleBuildDependencies;
+
+  makeFlags = [
+    "-C"
+    "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+    "KERNELRELEASE=${kernel.modDirVersion}"
+    "INSTALL_MOD_PATH=$(out)"
+    "ARCH=riscv"
+    "CROSS_COMPILE=${stdenv.cc.targetPrefix}"
+  ];
+  buildFlags = [ "modules" ];
+  installTargets = "modules_install";
+
   preConfigure = ''
-    export KEYSTONE_SDK_DIR=$(pwd)/sdk
     cd linux-keystone-driver
-  '';
-
-  buildPhase = ''
-    runHook preBuild
-    make -C ${KERNEL_DIR} ARCH=riscv M=$(pwd) $makeFlags KEYSTONE_SDK_DIR=$KEYSTONE_SDK_DIR modules
-    runHook postBuild
-  '';
-
-  installPhase = ''
-    runHook preInstall
-    make -C ${KERNEL_DIR} ARCH=riscv M=$(pwd) $makeFlags KEYSTONE_SDK_DIR=$KEYSTONE_SDK_DIR modules_install
-    runHook postInstall 
+    makeFlagsArray+=(M=$(pwd) KEYSTONE_SDK_DIR=$(pwd)/../sdk)
   '';
 
   hardeningDisable = [
     "pic"
     "format"
   ];
-  nativeBuildInputs = kernel.moduleBuildDependencies;
-
-  makeFlags = [
-    "KERNELRELEASE=${kernel.modDirVersion}"
-    "KERNEL_DIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
-    "INSTALL_MOD_PATH=$(out)"
-    "CROSS_COMPILE=${stdenv.cc.targetPrefix}"
-    "ARCH=riscv"
-  ];
 
   meta = {
     description = "An Open Framework for Architecting Trusted Execution Environments";
     homepage = "https://keystone-enclave.org";
-    # license = with lib.licenses ;[gpl2 bsd2]; #  
+    # license = with lib.licenses ;[gpl2 bsd2]; #
     maintainers = with lib.maintainers; [ pineapplehunter ];
     platforms = [ "riscv64-linux" ];
   };
-}
+})

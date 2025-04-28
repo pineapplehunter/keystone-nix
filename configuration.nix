@@ -17,12 +17,14 @@
   boot.supportedFilesystems = lib.mkForce [ ];
   documentation.enable = false;
   environment.defaultPackages = lib.mkForce [ ];
-  environment.noXlibs = true;
   hardware.firmware = lib.mkForce [ ];
+  networking.dhcpcd.wait = "if-carrier-up";
   networking.firewall.enable = false;
+  nix.enable = false;
   nixpkgs.flake.source = lib.mkForce null;
   programs.command-not-found.enable = false;
   programs.less.lessopen = null;
+  programs.nix-ld.enable = true;
   services.logrotate.enable = false;
   services.lvm.enable = false;
   services.openssh.enable = false;
@@ -34,37 +36,67 @@
   xdg.mime.enable = false;
   xdg.sounds.enable = false;
 
-  # enable nix flake support
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
-
   boot = {
     # adds keystone-driver kernel module to the system
     extraModulePackages = [
       (config.boot.kernelPackages.callPackage ./keystone-driver/package.nix { })
     ];
     # uncomment next line to load keystone-driver by default
-    # kernelModules = [ "keystone-driver" ];
+    kernelModules = [ "keystone-driver" ];
   };
 
   # add packages here
   # https://search.nixos.org/packages
   environment.systemPackages = lib.mkForce (
+    let
+
+      kp = pkgs.stdenv.mkDerivation {
+        name = "hello.ke";
+        nativeBuildInputs = [
+          pkgs.autoPatchelfHook
+          pkgs.makeself
+        ];
+        buildInputs = [
+          pkgs.pkgsCross.riscv64.stdenv.cc.cc.lib
+        ];
+        dontUnpack = true;
+        dontInstall = true;
+        buildPhase = ''
+          mkdir -p $out/bin
+          cp -v ${./hello.ke} hello.ke
+          ./hello.ke --noexec --target hello
+          rm hello.ke
+          autoPatchelf hello/*
+          makeself hello $out/bin/hello.ke "Custom keystone" ./hello-runner hello eyrie-rt loader.bin
+        '';
+      };
+    in
     with pkgs;
     [
       # essentials
-      systemd
       bashInteractive
       coreutils
+      systemd
+
+      # makeself deps
+      gawk
+      gnutar
+      gzip
 
       # optional
-      microfetch
-      which
-      vim
       file
-      nix
+      findutils
+      gdb
+      glibc
+      hello
+      kmod
+      microfetch
+      python3
+      strace
+      vim
+      which
+
+      kp
     ]
   );
 

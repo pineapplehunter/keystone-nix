@@ -1,7 +1,6 @@
 {
   stdenv,
   fetchFromGitHub,
-  ncurses,
 }:
 
 stdenv.mkDerivation {
@@ -15,23 +14,14 @@ stdenv.mkDerivation {
     hash = "sha256-bAJrWuuZaDR9hU3Wc8ZZ/l4NecriDMpLlY7f7kd/B8s=";
   };
 
-  nativeBuildInputs = [
-    ncurses
-  ];
-
   makeFlags = [
-    "O=build"
+    "-C bootrom"
+    "O=$(out)"
   ];
 
   preConfigure = ''
-    cd bootrom
-    substituteInPlace bootloader.lds \
-      --replace-fail "ALIGN(4)" "ALIGN(8)"
-    mkdir build
+    mkdir $out
   '';
 
-  installPhase = ''
-    mkdir $out
-    cp build/* $out
-  '';
+  dontInstall = true;
 }
