@@ -4,9 +4,9 @@
   inputs.nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
   nixConfig = {
-    extra-substituters = [ "https://keystone-nix.cachix.org" ];
+    extra-substituters = [ "https://attic.s.ihavenojob.work/keystone-nix-cache" ];
     extra-trusted-public-keys = [
-      "keystone-nix.cachix.org-1:I0zDDsziHqpZDmrNp4mTJGj77AroVJj91IMFZVFEJt8="
+      "keystone-nix-cache:5b9qjOQSEMpslVDH7Si6ptmH0m//o48KbtxiI1rDb/s="
     ];
   };
 
@@ -20,7 +20,6 @@
       systems = [
         "x86_64-linux"
         "aarch64-linux"
-        "riscv64-linux"
       ];
       eachSystem =
         f:
