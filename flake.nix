@@ -96,6 +96,7 @@
             in
             pkgs.writeShellScriptBin "qemu-run" ''
               TMP=$(mktemp --suffix=.img)
+              KEYSTONE_PORT=9821
               echo Extracting sd image file to $TMP
               zstd -f -d ${imgPkg}/sd-image/nixos*.img.zst -o $TMP
               chmod +w $TMP
@@ -107,14 +108,16 @@
               trap cleanup SIGINT
 
               ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
-                -m 2G \
+                -m 4G \
                 -machine virt,rom=${romPkg}/bootrom.bin \
-                -bios ${crossPkgs.keystone.sm}/share/opensbi/lp64/generic/firmware/fw_jump.bin \
+                -bios /home/shogo/tmp/keystone/build-generic64/buildroot.build/images/fw_jump.bin \
                 -kernel ${systemPkg}/kernel \
                 -drive file=$TMP,format=raw \
+                -netdev user,id=net0,net=192.168.100.1/24,dhcpstart=192.168.100.128,hostfwd=tcp::10022-:22 \
+                -device virtio-net-device,netdev=net0 \
+                -device virtio-rng-pci \
                 -nographic \
-                -initrd ${systemPkg}/initrd \
-                -append "init=${systemPkg}/init" \
+                -append "console=ttyS0 ro root=/dev/vda2 init=${systemPkg}/init" \
                 "$@"
               cleanup
             '';
