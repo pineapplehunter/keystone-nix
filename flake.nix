@@ -62,6 +62,9 @@
           };
         };
       };
+      nixosModules = {
+        rootfs = ./rootfs-module.nix;
+      };
       osConfig = eachSystem (
         pkgs:
         lib.nixosSystem {
@@ -72,6 +75,7 @@
               nixpkgs.crossSystem.system = "riscv64-linux";
               nixpkgs.overlays = [ self.overlays.default ];
             }
+            self.nixosModules.rootfs
             ./configuration.nix
           ];
         }
@@ -80,7 +84,6 @@
         pkgs:
         let
           system = pkgs.system;
-          crossPkgs = pkgs.pkgsCross.riscv64;
           osConfig = self.osConfig.${system};
         in
         {
@@ -91,14 +94,14 @@
           qemu-run =
             let
               systemPkg = osConfig.config.system.build.toplevel;
-              imgPkg = osConfig.config.system.build.sdImage;
+              imgPkg = osConfig.config.system.build.rootfsImage;
               romPkg = self.packages.${system}.bootrom;
             in
             pkgs.writeShellScriptBin "qemu-run" ''
               TMP=$(mktemp --suffix=.img)
               KEYSTONE_PORT=9821
               echo Extracting sd image file to $TMP
-              zstd -f -d ${imgPkg}/sd-image/nixos*.img.zst -o $TMP
+              zstd -f -d ${imgPkg} -o $TMP
               chmod +w $TMP
 
               cleanup(){
@@ -117,7 +120,7 @@
                 -device virtio-net-device,netdev=net0 \
                 -device virtio-rng-pci \
                 -nographic \
-                -append "console=ttyS0 ro root=/dev/vda2 init=${systemPkg}/init" \
+                -append "console=ttyS0 ro root=/dev/vda init=${systemPkg}/init" \
                 "$@"
               cleanup
             '';
