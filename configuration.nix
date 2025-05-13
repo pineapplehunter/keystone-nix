@@ -16,7 +16,7 @@
   boot.initrd.luks.fido2Support.enable = false;
   boot.supportedFilesystems = lib.mkForce [ ];
   documentation.enable = false;
-  environment.defaultPackages = lib.mkForce [ ];
+  # environment.defaultPackages = lib.mkForce [ ];
   hardware.firmware = lib.mkForce [ ];
   networking.dhcpcd.wait = "if-carrier-up";
   networking.firewall.enable = false;
@@ -49,7 +49,6 @@
   # https://search.nixos.org/packages
   environment.systemPackages = lib.mkForce (
     let
-
       kp = pkgs.stdenv.mkDerivation {
         name = "hello.ke";
         nativeBuildInputs = [
@@ -76,7 +75,7 @@
       # essentials
       bashInteractive
       coreutils
-      systemd
+      # systemd
 
       # makeself deps
       gawk
@@ -86,12 +85,12 @@
       # optional
       file
       findutils
-      gdb
+      # gdb
       glibc
       hello
       kmod
       microfetch
-      python3
+      python3Minimal
       strace
       vim
       which
