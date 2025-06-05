@@ -1,19 +1,13 @@
 {
-  fetchFromGitHub,
   opensbi_1_1,
   runCommand,
   stdenv,
   python3,
+  keystone,
 }:
 let
-  keystone-src = fetchFromGitHub {
-    owner = "keystone-enclave";
-    repo = "keystone";
-    rev = "80ffb2f9d4e774965589ee7c67609b0af051dc8b";
-    hash = "sha256-bAJrWuuZaDR9hU3Wc8ZZ/l4NecriDMpLlY7f7kd/B8s=";
-  };
   keystone-sm-patched = runCommand "keystone" { } ''
-    cp -r ${keystone-src} $out
+    cp -r ${keystone.src} $out
     substituteInPlace $out/sm/src/thread.{h,c} \
       --replace-warn sbadaddr stval
   '';
