@@ -2,6 +2,10 @@
   description = "A very basic flake";
 
   inputs.nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+  inputs.keystone-src = {
+    url = "github:keystone-enclave/keystone";
+    flake = false;
+  };
 
   nixConfig = {
     extra-substituters = [ "https://attic.s.ihavenojob.work/keystone-nix-cache" ];
@@ -13,6 +17,7 @@
   outputs =
     {
       nixpkgs,
+      keystone-src,
       self,
     }:
     let
@@ -43,6 +48,7 @@
           qemu = final.qemu.overrideAttrs {
             patches = [ ./qemu.patch ];
           };
+          src = keystone-src;
         };
         nix-ld = prev.nix-ld.overrideAttrs (old: {
           patches = (old.patches or [ ]) ++ [ ./nix-ld-riscv.patch ];

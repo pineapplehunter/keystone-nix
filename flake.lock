@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "keystone-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1741628551,
+        "narHash": "sha256-5rfuFPikKNErPR6sfE3cmIbUHTSbxhml+osxps/00fE=",
+        "owner": "keystone-enclave",
+        "repo": "keystone",
+        "rev": "88c49ee99e745980eea623bddacb40f7303107bd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "keystone-enclave",
+        "repo": "keystone",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1746904237,
@@ -18,6 +34,7 @@
     },
     "root": {
       "inputs": {
+        "keystone-src": "keystone-src",
         "nixpkgs": "nixpkgs"
       }
     }
