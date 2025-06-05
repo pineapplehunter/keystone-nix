@@ -45,6 +45,7 @@
           bootrom = final.callPackage ./keystone-bootrom/package.nix { };
           sm = final.callPackage ./keystone-sm/package.nix { };
           kernelPackages = final.callPackage ./keystone-kernel/package.nix { };
+          sdk = final.callPackage ./keystone-sdk/package.nix { };
           qemu = final.qemu.overrideAttrs {
             patches = [ ./qemu.patch ];
           };
@@ -94,7 +95,11 @@
         in
         {
           default = self.packages.${system}.qemu-run;
-          inherit (pkgs.pkgsCross.riscv64.keystone) driver sm;
+          inherit (pkgs.pkgsCross.riscv64.keystone)
+            driver
+            sm
+            sdk
+            ;
           inherit (pkgs.pkgsCross.riscv64-embedded.keystone) bootrom;
           systemConfig = osConfig.config.system.build.toplevel;
           qemu-run =
