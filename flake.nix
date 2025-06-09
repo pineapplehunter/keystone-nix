@@ -47,9 +47,14 @@
           kernelPackages = final.callPackage ./keystone-kernel/package.nix { };
           sdk = final.callPackage ./keystone-sdk/package.nix { };
           runtime = final.callPackage ./keystone-runtime/package.nix { };
-          qemu = final.qemu.overrideAttrs {
-            patches = [ ./qemu.patch ];
-          };
+          qemu =
+            (final.qemu.override {
+              hostCpuTargets = [ "riscv64-softmmu" ];
+            }).overrideAttrs
+              (old: {
+                patches = [ ./qemu.patch ];
+                postInstall = (old.postInstall or "") + "rm $out/bin/qemu-kvm";
+              });
           src = keystone-src;
         };
         nix-ld = prev.nix-ld.overrideAttrs (old: {
