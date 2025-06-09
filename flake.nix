@@ -121,6 +121,7 @@
               systemPkg = osConfig.config.system.build.toplevel;
               imgPkg = osConfig.config.system.build.rootfsImage;
               romPkg = self.packages.${system}.bootrom;
+              inherit (pkgs.pkgsCross.riscv64.keystone) sm;
             in
             pkgs.writeShellScriptBin "qemu-run" ''
               TMP=$(mktemp --suffix=.img)
@@ -138,7 +139,7 @@
               ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
                 -m 4G \
                 -machine virt,rom=${romPkg}/bootrom.bin \
-                -bios /home/shogo/tmp/keystone/build-generic64/buildroot.build/images/fw_jump.bin \
+                -bios ${sm}/platform/generic/firmware/fw_jump.bin \
                 -kernel ${systemPkg}/kernel \
                 -drive file=$TMP,format=raw \
                 -netdev user,id=net0,net=192.168.100.1/24,dhcpstart=192.168.100.128,hostfwd=tcp::10022-:22 \
