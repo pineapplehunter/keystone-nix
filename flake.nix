@@ -55,6 +55,7 @@
                 patches = [ ./qemu.patch ];
                 postInstall = (old.postInstall or "") + "rm $out/bin/qemu-kvm";
               });
+          hello-ke = final.callPackage ./examples/hello/package.nix { };
           src = keystone-src;
         };
         nix-ld = prev.nix-ld.overrideAttrs (old: {
@@ -106,6 +107,7 @@
             sm
             sdk
             runtime
+            hello-ke
             ;
           runtime-with-plugin = pkgs.pkgsCross.riscv64.keystone.runtime.override {
             plugins = [
