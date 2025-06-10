@@ -5,7 +5,7 @@
   lib,
   plugins ? [ ],
 }:
-stdenv.mkDerivation (final: {
+stdenv.mkDerivation (finalAttrs: {
   pname = "keystone-runtime";
   version = "0";
   inherit (keystone) src;
@@ -30,6 +30,7 @@ stdenv.mkDerivation (final: {
     install -Dt $out loader.bin
     install -Dt $out eyrie-rt
     install -Dt $out .options_log
+    cp -r include $out
 
     runHook postInstall
   '';
@@ -37,7 +38,7 @@ stdenv.mkDerivation (final: {
   hardeningDisable = [ "stackprotector" ];
 
   passthru = {
-    loader = "${final.package}/loader.bin";
-    rt = "${final.package}/eyrie-rt";
+    loader = "${finalAttrs.finalPackage}/loader.bin";
+    rt = "${finalAttrs.finalPackage}/eyrie-rt";
   };
 })
