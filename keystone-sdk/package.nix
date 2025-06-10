@@ -28,7 +28,6 @@ stdenv.mkDerivation {
   cmakeFlags = [
     (lib.cmakeFeature "KEYSTONE_SDK_DIR" (placeholder "out"))
     (lib.cmakeFeature "KEYSTONE_BITS" "64")
-    (lib.cmakeFeature "cross_compile" stdenv.cc.targetPrefix)
   ];
 
   hardeningDisable = [ "stackprotector" ];
