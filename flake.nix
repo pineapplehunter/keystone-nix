@@ -122,7 +122,7 @@
             let
               systemPkg = osConfig.config.system.build.toplevel;
               imgPkg = osConfig.config.system.build.rootfsImage;
-              romPkg = self.packages.${system}.bootrom;
+              inherit (pkgs.pkgsCross.riscv64-embedded.keystone) bootrom;
               inherit (pkgs.pkgsCross.riscv64.keystone) sm;
             in
             pkgs.writeShellScriptBin "qemu-run" ''
@@ -140,7 +140,7 @@
 
               ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
                 -m 4G \
-                -machine virt,rom=${romPkg}/bootrom.bin \
+                -machine virt,rom=${bootrom}/bootrom.bin \
                 -bios ${sm}/platform/generic/firmware/fw_jump.bin \
                 -kernel ${systemPkg}/kernel \
                 -drive file=$TMP,format=raw \
