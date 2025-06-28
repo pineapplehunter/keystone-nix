@@ -19,19 +19,17 @@ stdenv.mkDerivation (finalAttrs: {
     "INSTALL_MOD_PATH=$(out)"
     "ARCH=riscv"
     "CROSS_COMPILE=${stdenv.cc.targetPrefix}"
+    "KEYSTONE_SDK_DIR=${keystone.sdk}"
+    "M=$(PWD)"
   ];
   buildFlags = [ "modules" ];
   installTargets = "modules_install";
 
   preConfigure = ''
     cd linux-keystone-driver
-    makeFlagsArray+=(M=$(pwd) KEYSTONE_SDK_DIR=$(pwd)/../sdk)
   '';
 
-  hardeningDisable = [
-    "pic"
-    "format"
-  ];
+  hardeningDisable = [ "pic" ];
 
   meta = {
     description = "An Open Framework for Architecting Trusted Execution Environments";
