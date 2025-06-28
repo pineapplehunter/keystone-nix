@@ -6,7 +6,7 @@ index d08d76d..d2800c0 100644
  #include <sys/ioctl.h>
  #include <sys/types.h>
  #include <unistd.h>
-+#include <stdint.h>
++#include <cstdint>
 
  #include <cerrno>
  #include <cstring>
@@ -14,11 +14,13 @@ diff --git a/sdk/include/shared/sm_call.h b/sdk/include/shared/sm_call.h
 index b9d8f95..5845bb2 100644
 --- a/sdk/include/shared/sm_call.h
 +++ b/sdk/include/shared/sm_call.h
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,10 @@
  #ifndef __SM_CALL_H__
  #define __SM_CALL_H__
 
-+#include <stdint.h>
++#ifdef __cplusplus
++#include <cstdint>
++#endif
 +
  // BKE (Berkeley Keystone Enclave)
  #define SBI_EXT_EXPERIMENTAL_KEYSTONE_ENCLAVE 0x08424b45
