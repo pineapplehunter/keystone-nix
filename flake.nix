@@ -156,6 +156,12 @@
         }
       );
 
+      devShells = eachSystem (pkgs: {
+        default = pkgs.mkShellNoCC {
+          packages = [ (pkgs.wrapBintoolsWith { bintools = pkgs.binutils-unwrapped-all-targets; }) ];
+        };
+      });
+
       checks = eachSystem (pkgs: self.packages.${pkgs.system});
       legacyPackages = eachSystem lib.id;
     };
