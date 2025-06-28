@@ -1,0 +1,46 @@
+diff --git a/sm/src/enclave.c b/sm/src/enclave.c
+index 35e4238..340a9ce 100644
+--- a/sm/src/enclave.c
++++ b/sm/src/enclave.c
+@@ -86,6 +86,7 @@ static inline void context_switch_to_enclave(struct sbi_trap_regs* regs,
+ 
+   // Setup any platform specific defenses
+   platform_switch_to_enclave(&(enclaves[eid]));
++  sbi_printf("enter enclave\n");
+   cpu_enter_enclave_context(eid);
+ }
+ 
+@@ -277,14 +278,14 @@ static int is_create_args_valid(struct keystone_sbi_create_t* args)
+ {
+   uintptr_t epm_start, epm_end;
+ 
+-  /* printm("[create args info]: \r\n\tepm_addr: %llx\r\n\tepmsize: %llx\r\n\tutm_addr: %llx\r\n\tutmsize: %llx\r\n\truntime_addr: %llx\r\n\tuser_addr: %llx\r\n\tfree_addr: %llx\r\n", */
+-  /*        args->epm_region.paddr, */
+-  /*        args->epm_region.size, */
+-  /*        args->utm_region.paddr, */
+-  /*        args->utm_region.size, */
+-  /*        args->runtime_paddr, */
+-  /*        args->user_paddr, */
+-  /*        args->free_paddr); */
++  sbi_printf("[create args info]: \r\n\tepm_addr: %lx\r\n\tepmsize: %lx\r\n\tutm_addr: %lx\r\n\tutmsize: %lx\r\n\truntime_addr: %lx\r\n\tuser_addr: %lx\r\n\tfree_addr: %lx\r\n",
++         args->epm_region.paddr,
++         args->epm_region.size,
++         args->utm_region.paddr,
++         args->utm_region.size,
++         args->runtime_paddr,
++         args->user_paddr,
++         args->free_paddr);
+ 
+   // check if physical addresses are valid
+   if (args->epm_region.size <= 0)
+
+--- a/sm/src/sm-sbi-opensbi.c
++++ b/sm/src/sm-sbi-opensbi.c
+@@ -19,6 +19,7 @@ static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long
+                      unsigned long *out_val,
+                      struct sbi_trap_info *out_trap)
+ {
++  sbi_printf("sbi sm handler called %ld\n", funcid);
+   uintptr_t retval;
+ 
+   if (funcid <= FID_RANGE_DEPRECATED) { return SBI_ERR_SM_DEPRECATED; }

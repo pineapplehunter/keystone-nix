@@ -25,6 +25,7 @@ stdenv.mkDerivation {
     "PLATFORM_RISCV_ABI=lp64d"
     "PLATFORM_RISCV_ISA=rv64imafd_zifencei_zicsr"
     "PLATFORM_RISCV_TOOLCHAIN_DEFAULT=1"
+    "FW_PATH=$(out)/platform/generic/firmware"
   ];
   postPatch = ''
     patchShebangs ./opensbi/scripts
@@ -32,8 +33,12 @@ stdenv.mkDerivation {
       --replace-warn sbadaddr stval
     (
       cd opensbi
-      patch --verbose -p1 < ${./opensbi-change-basename.patch}
+      patch -p1 < ${./opensbi-change-basename.patch}
       patch -p1 < ${./opensbi-firmware-secure-boot.patch}
+    )
+    (
+      cd keystone
+      patch -p1 < ${./print_enclave.patch}
     )
     makeFlagsArray+=(
       "KEYSTONE_SM=$(pwd)/keystone/sm"
