@@ -1,5 +1,16 @@
+From eb46dad1b92398623886f00f51e4afa8a02e6d4b Mon Sep 17 00:00:00 2001
+From: Shogo Takata <peshogo@gmail.com>
+Date: Sat, 28 Jun 2025 15:53:53 +0900
+Subject: [PATCH] riscv: add-rom
+
+---
+ hw/riscv/boot.c         | 115 +++++++++++++++++++++++++---------------
+ hw/riscv/virt.c         |  20 ++++++-
+ include/hw/riscv/virt.h |   1 +
+ 3 files changed, 93 insertions(+), 43 deletions(-)
+
 diff --git a/hw/riscv/boot.c b/hw/riscv/boot.c
-index 2e319168db..49c19d844c 100644
+index 765b9e2b1a..9a9e766d0b 100644
 --- a/hw/riscv/boot.c
 +++ b/hw/riscv/boot.c
 @@ -26,6 +26,7 @@
@@ -8,13 +19,43 @@ index 2e319168db..49c19d844c 100644
  #include "hw/riscv/boot_opensbi.h"
 +#include "hw/riscv/virt.h"
  #include "elf.h"
- #include "sysemu/device_tree.h"
- #include "sysemu/qtest.h"
-@@ -398,52 +399,82 @@ void riscv_setup_rom_reset_vec(MachineState *machine, RISCVHartArrayState *harts
+ #include "system/device_tree.h"
+ #include "system/qtest.h"
+@@ -435,52 +436,82 @@ void riscv_setup_rom_reset_vec(MachineState *machine, RISCVHartArrayState *harts
      int i;
      uint32_t start_addr_hi32 = 0x00000000;
      uint32_t fdt_load_addr_hi32 = 0x00000000;
 +    RISCVVirtState *rvs = RISCV_VIRT_MACHINE(machine);
++
++    if (rvs->rom) {
++        uint8_t *rom = g_malloc(rom_size);
++        if (!rom) {
++            error_report("could not allocate rom buffer");
++            exit(1);
++        }
++
++        size_t bl_size = load_image_size(rvs->rom, rom, rom_size);
++        if (bl_size == -1) {
++            error_report("could not get rom size");
++            exit(1);
++        }
++
++        rom_add_blob_fixed_as("mrom.reset", rom, bl_size,
++                                rom_base, &address_space_memory);
++        g_free(rom);
++
++        /* we also need the fdt */
++        if (fdt_pack(machine->fdt) ||
++                fdt_totalsize(machine->fdt) > rom_size - bl_size) {
++            error_report("not enough space to store device tree");
++            exit(1);
++        }
++
++        // word-aligned fdt location
++        size_t fdt_loc = rom_base + bl_size;
++        fdt_loc = ((fdt_loc + 0x4 - 1) & ~(0x4 - 1));
++        rom_add_blob_fixed_as("mrom.fdt", machine->fdt, fdt_totalsize(machine->fdt),
++                                fdt_loc, &address_space_memory);
  
 -    if (!riscv_is_32bit(harts)) {
 -        start_addr_hi32 = start_addr >> 32;
@@ -37,17 +78,11 @@ index 2e319168db..49c19d844c 100644
 -    if (riscv_is_32bit(harts)) {
 -        reset_vec[3] = 0x0202a583;   /*     lw     a1, 32(t0) */
 -        reset_vec[4] = 0x0182a283;   /*     lw     t0, 24(t0) */
--    } else {
+     } else {
 -        reset_vec[3] = 0x0202b583;   /*     ld     a1, 32(t0) */
 -        reset_vec[4] = 0x0182b283;   /*     ld     t0, 24(t0) */
 -    }
-+    if (rvs->rom) {
-+        uint8_t *rom = g_malloc(rom_size);
-+        if (!rom) {
-+            error_report("could not allocate rom buffer");
-+            exit(1);
-+        }
- 
+-
 -    if (!harts->harts[0].cfg.ext_zicsr) {
 -        /*
 -         * The Zicsr extension has been disabled, so let's ensure we don't
@@ -56,33 +91,6 @@ index 2e319168db..49c19d844c 100644
 -         */
 -        reset_vec[2] = 0x00000013;   /*     addi   x0, x0, 0 */
 -    }
-+        size_t bl_size = load_image_size(rvs->rom, rom, rom_size);
-+        if (bl_size == -1) {
-+            error_report("could not get rom size");
-+            exit(1);
-+        }
-+
-+        rom_add_blob_fixed_as("mrom.reset", rom, bl_size,
-+                                rom_base, &address_space_memory);
-+        g_free(rom);
- 
--    /* copy in the reset vector in little_endian byte order */
--    for (i = 0; i < ARRAY_SIZE(reset_vec); i++) {
--        reset_vec[i] = cpu_to_le32(reset_vec[i]);
-+        /* we also need the fdt */
-+        if (fdt_pack(machine->fdt) ||
-+                fdt_totalsize(machine->fdt) > rom_size - bl_size) {
-+            error_report("not enough space to store device tree");
-+            exit(1);
-+        }
-+
-+        // word-aligned fdt location
-+        size_t fdt_loc = rom_base + bl_size;
-+        fdt_loc = ((fdt_loc + 0x4 - 1) & ~(0x4 - 1));
-+        rom_add_blob_fixed_as("mrom.fdt", machine->fdt, fdt_totalsize(machine->fdt),
-+                                fdt_loc, &address_space_memory);
-+
-+    } else {
 +        if (!riscv_is_32bit(harts)) {
 +            start_addr_hi32 = start_addr >> 32;
 +            fdt_load_addr_hi32 = fdt_load_addr >> 32;
@@ -116,7 +124,10 @@ index 2e319168db..49c19d844c 100644
 +             */
 +            reset_vec[2] = 0x00000013;   /*     addi   x0, x0, 0 */
 +        }
-+
+ 
+-    /* copy in the reset vector in little_endian byte order */
+-    for (i = 0; i < ARRAY_SIZE(reset_vec); i++) {
+-        reset_vec[i] = cpu_to_le32(reset_vec[i]);
 +        /* copy in the reset vector in little_endian byte order */
 +        for (i = 0; i < ARRAY_SIZE(reset_vec); i++) {
 +            reset_vec[i] = cpu_to_le32(reset_vec[i]);
@@ -136,10 +147,10 @@ index 2e319168db..49c19d844c 100644
  
  void riscv_setup_direct_kernel(hwaddr kernel_addr, hwaddr fdt_addr)
 diff --git a/hw/riscv/virt.c b/hw/riscv/virt.c
-index 45a8c4f819..24445f2679 100644
+index e517002fdf..5aaa216619 100644
 --- a/hw/riscv/virt.c
 +++ b/hw/riscv/virt.c
-@@ -70,7 +70,7 @@ static bool virt_aclint_allowed(void)
+@@ -81,7 +81,7 @@ static bool virt_aclint_allowed(void)
  
  static const MemMapEntry virt_memmap[] = {
      [VIRT_DEBUG] =        {        0x0,         0x100 },
@@ -148,7 +159,7 @@ index 45a8c4f819..24445f2679 100644
      [VIRT_TEST] =         {   0x100000,        0x1000 },
      [VIRT_RTC] =          {   0x101000,        0x1000 },
      [VIRT_CLINT] =        {  0x2000000,       0x10000 },
-@@ -1757,6 +1757,20 @@ static void virt_set_acpi(Object *obj, Visitor *v, const char *name,
+@@ -1871,6 +1871,20 @@ static void virt_set_acpi(Object *obj, Visitor *v, const char *name,
      visit_type_OnOffAuto(v, name, &s->acpi, errp);
  }
  
@@ -169,25 +180,29 @@ index 45a8c4f819..24445f2679 100644
  static HotplugHandler *virt_machine_get_hotplug_handler(MachineState *machine,
                                                          DeviceState *dev)
  {
-@@ -1853,6 +1867,9 @@ static void virt_machine_class_init(ObjectClass *oc, void *data)
+@@ -1977,6 +1991,10 @@ static void virt_machine_class_init(ObjectClass *oc, void *data)
                                NULL, NULL);
-     object_class_property_set_description(oc, "acpi",
-                                           "Enable ACPI");
+     object_class_property_set_description(oc, "iommu-sys",
+                                           "Enable IOMMU platform device");
 +
 +    object_class_property_add_str(oc, "rom", virt_get_rom, virt_set_rom);
 +    object_class_property_set_description(oc, "rom", "ROM image");
++
  }
  
  static const TypeInfo virt_machine_typeinfo = {
 diff --git a/include/hw/riscv/virt.h b/include/hw/riscv/virt.h
-index c0dc41ff9a..7abd0473b2 100644
+index 48a14bea2e..d1f48e180f 100644
 --- a/include/hw/riscv/virt.h
 +++ b/include/hw/riscv/virt.h
-@@ -62,6 +62,7 @@ struct RISCVVirtState {
-     OnOffAuto acpi;
+@@ -63,6 +63,7 @@ struct RISCVVirtState {
      const MemMapEntry *memmap;
      struct GPEXHost *gpex_host;
+     OnOffAuto iommu_sys;
 +    char *rom;
  };
  
  enum {
+-- 
+2.49.0
+

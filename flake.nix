@@ -140,6 +140,7 @@
 
               ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
                 -m 4G \
+                -smp 4 \
                 -machine virt,rom=${bootrom}/bootrom.bin \
                 -bios ${sm}/platform/generic/firmware/fw_jump.bin \
                 -kernel ${systemPkg}/kernel \
@@ -148,7 +149,7 @@
                 -device virtio-net-device,netdev=net0 \
                 -device virtio-rng-pci \
                 -nographic \
-                -append "console=ttyS0 ro root=/dev/vda init=${systemPkg}/init" \
+                -append "console=ttyS0 ro root=/dev/vda init=${systemPkg}/init cma=1G" \
                 "$@"
               cleanup
             '';
