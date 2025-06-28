@@ -14,7 +14,7 @@
   ];
 
   services.getty.autologinUser = "root";
-  environment.enableDebugInfo = true;
+  # environment.enableDebugInfo = true;
   system.switch.enable = false;
   nix.enable = false;
   boot.supportedFilesystems = lib.mkForce [ ];
@@ -51,9 +51,6 @@
   environment.systemPackages = with pkgs; [
     # optional
     file
-    gcc
-    gdb
-    glibc
     hello
     microfetch
     strace
