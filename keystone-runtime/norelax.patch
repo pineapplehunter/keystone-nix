@@ -1,0 +1,30 @@
+diff --git a/runtime/loader-binary/loader.S b/runtime/loader-binary/loader.S
+index 5908ffa..7ac6eca 100644
+--- a/runtime/loader-binary/loader.S
++++ b/runtime/loader-binary/loader.S
+@@ -3,6 +3,10 @@
+ #include <asm/csr.h>
+ #include "util/asm_helpers.h"
+ 
++.option push
++.option norvc
++.option norelax
++
+ .section .text
+ _start:
+   // a1: dram_base
+@@ -14,6 +18,7 @@ _start:
+   // a7: untrusted_size
+ 
+   // use designated stack
++  j exit
+   la sp, _estack
+ 
+   // save all args to stack 
+@@ -67,3 +72,5 @@ _start:
+ 
+ exit:
+   call error_and_exit
++
++.option pop
+\ No newline at end of file

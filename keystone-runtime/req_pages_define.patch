@@ -1,0 +1,21 @@
+diff --git a/runtime/call/linux_wrap.c b/runtime/call/linux_wrap.c
+index 19dc912..2fab5bd 100644
+--- a/runtime/call/linux_wrap.c
++++ b/runtime/call/linux_wrap.c
+@@ -113,6 +113,7 @@ uintptr_t syscall_mmap(void *addr, size_t length, int prot, int flags,
+   uintptr_t ret = (uintptr_t)((void*)-1);
+ 
+   int pte_flags = PTE_U | PTE_A;
++  int req_pages = 0;
+ 
+   if(flags != (MAP_ANONYMOUS | MAP_PRIVATE) || fd != -1){
+     // we don't support mmaping any other way yet
+@@ -130,7 +131,7 @@ uintptr_t syscall_mmap(void *addr, size_t length, int prot, int flags,
+ 
+ 
+   // Find a continuous VA space that will fit the req. size
+-  int req_pages = vpn(PAGE_UP(length));
++  req_pages = vpn(PAGE_UP(length));
+ 
+   // Do we have enough available phys pages?
+   if( req_pages > spa_available()){
