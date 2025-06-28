@@ -12,6 +12,7 @@ let
       "linux_syscall"
       "env_setup"
     ];
+    internalStrace = true;
   };
 in
 stdenv.mkDerivation {
@@ -27,10 +28,11 @@ stdenv.mkDerivation {
     keystone.sdk
   ];
   postInstall = ''
+    ${../../hello.ke} --noexec --target $out/lib
     wrapProgram $out/bin/hello-runner \
       --add-flag $out/share/hello \
       --add-flag ${runtime.rt} \
-      --add-flag ${runtime.loader}
+      --add-flag $out/lib/loader.bin
   '';
 
   # dontStrip = true;
