@@ -8,10 +8,8 @@
   };
 
   nixConfig = {
-    extra-substituters = [ "https://attic.s.ihavenojob.work/keystone-nix-cache" ];
-    extra-trusted-public-keys = [
-      "keystone-nix-cache:5b9qjOQSEMpslVDH7Si6ptmH0m//o48KbtxiI1rDb/s="
-    ];
+    extra-substituters = [ "https://attic.s.ihavenojob.work/shogo" ];
+    extra-trusted-public-keys = [ "shogo:R9ZWo9iGw8E0X6G24R7XLPH0UeE3VZ/WFi2+D0Kmud4=" ];
   };
 
   outputs =
@@ -60,11 +58,9 @@
         };
         nix-ld = prev.nix-ld.overrideAttrs (old: {
           patches = (old.patches or [ ]) ++ [ ./nix-ld-riscv.patch ];
-          postInstall =
-            (old.postInstall or "")
-            + ''
-              echo /lib/ld-linux-riscv64-lp64d.so.1 > $out/nix-support/ldpath
-            '';
+          postInstall = (old.postInstall or "") + ''
+            echo /lib/ld-linux-riscv64-lp64d.so.1 > $out/nix-support/ldpath
+          '';
         });
         opensbi_1_1 = prev.opensbi.overrideAttrs rec {
           version = "1.1";

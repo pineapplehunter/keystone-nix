@@ -11,6 +11,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: "personal nix caching"
     steps:
       - uses: actions/checkout@v5
       - uses: wimpysworld/nothing-but-nix@main
@@ -18,8 +19,8 @@ jobs:
       - name: Setup Attic cache
         uses: ryanccn/attic-action@v0
         with:
-          endpoint: ${{ secrets.ATTIC_ENDPOINT }}
-          cache: ${{ secrets.ATTIC_CACHE }}
+          endpoint: ${{ vars.ATTIC_ENDPOINT }}
+          cache: ${{ vars.ATTIC_CACHE }}
           token: ${{ secrets.ATTIC_TOKEN }}
       - name: Run checks
         run: nix flake check --keep-going --all-systems --accept-flake-config
