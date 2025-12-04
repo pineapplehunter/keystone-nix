@@ -13,6 +13,8 @@
     "${modulesPath}/profiles/qemu-guest.nix"
   ];
 
+  nixpkgs.system = "riscv64-linux";
+
   services.getty.autologinUser = "root";
   # environment.enableDebugInfo = true;
   system.switch.enable = false;
