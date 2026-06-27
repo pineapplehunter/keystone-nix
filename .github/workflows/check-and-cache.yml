@@ -14,11 +14,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: "personal nix caching"
     steps:
-      - uses: actions/checkout@v5
-      - uses: wimpysworld/nothing-but-nix@main
-      - uses: cachix/install-nix-action@v31
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
+      - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
 
       - name: Build niks3
         id: niks3
@@ -32,4 +31,4 @@ jobs:
           niks3-bin: ${{ steps.niks3.outputs.store-path }}/bin/niks3
 
       - name: Run checks
-        run: nix flake check --keep-going --all-systems --accept-flake-config
+        run: nix flake check
