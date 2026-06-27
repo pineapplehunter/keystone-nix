@@ -1,27 +1,16 @@
-From a63e032c77a04e482d17e1aea7961720c6c93277 Mon Sep 17 00:00:00 2001
-From: Shogo Takata <peshogo@gmail.com>
-Date: Sun, 14 Sep 2025 13:48:16 +0900
-Subject: [PATCH] keystonr riscv patch
-
----
- hw/riscv/boot.c         | 115 +++++++++++++++++++++++++---------------
- hw/riscv/virt.c         |  20 ++++++-
- include/hw/riscv/virt.h |   1 +
- 3 files changed, 93 insertions(+), 43 deletions(-)
-
 diff --git a/hw/riscv/boot.c b/hw/riscv/boot.c
-index 828a867be3..34c93fa90f 100644
+index e5490bed..ba9df7df 100644
 --- a/hw/riscv/boot.c
 +++ b/hw/riscv/boot.c
 @@ -26,6 +26,7 @@
- #include "hw/loader.h"
+ #include "hw/core/loader.h"
  #include "hw/riscv/boot.h"
  #include "hw/riscv/boot_opensbi.h"
 +#include "hw/riscv/virt.h"
  #include "elf.h"
  #include "system/device_tree.h"
  #include "system/qtest.h"
-@@ -435,52 +436,82 @@ void riscv_setup_rom_reset_vec(MachineState *machine, RISCVHartArrayState *harts
+@@ -438,52 +439,82 @@ void riscv_setup_rom_reset_vec(MachineState *machine, RISCVHartArrayState *harts
      int i;
      uint32_t start_addr_hi32 = 0x00000000;
      uint32_t fdt_load_addr_hi32 = 0x00000000;
@@ -147,7 +136,7 @@ index 828a867be3..34c93fa90f 100644
  
  void riscv_setup_direct_kernel(hwaddr kernel_addr, hwaddr fdt_addr)
 diff --git a/hw/riscv/virt.c b/hw/riscv/virt.c
-index 47e573f85a..7bbc54e137 100644
+index a1c323e6..c583e580 100644
 --- a/hw/riscv/virt.c
 +++ b/hw/riscv/virt.c
 @@ -81,7 +81,7 @@ static bool virt_aclint_allowed(void)
@@ -159,7 +148,7 @@ index 47e573f85a..7bbc54e137 100644
      [VIRT_TEST] =         {   0x100000,        0x1000 },
      [VIRT_RTC] =          {   0x101000,        0x1000 },
      [VIRT_CLINT] =        {  0x2000000,       0x10000 },
-@@ -1872,6 +1872,20 @@ static void virt_set_acpi(Object *obj, Visitor *v, const char *name,
+@@ -1871,6 +1871,20 @@ static void virt_set_acpi(Object *obj, Visitor *v, const char *name,
      visit_type_OnOffAuto(v, name, &s->acpi, errp);
  }
  
@@ -180,7 +169,7 @@ index 47e573f85a..7bbc54e137 100644
  static HotplugHandler *virt_machine_get_hotplug_handler(MachineState *machine,
                                                          DeviceState *dev)
  {
-@@ -1978,6 +1992,10 @@ static void virt_machine_class_init(ObjectClass *oc, const void *data)
+@@ -1977,6 +1991,10 @@ static void virt_machine_class_init(ObjectClass *oc, const void *data)
                                NULL, NULL);
      object_class_property_set_description(oc, "iommu-sys",
                                            "Enable IOMMU platform device");
@@ -192,7 +181,7 @@ index 47e573f85a..7bbc54e137 100644
  
  static const TypeInfo virt_machine_typeinfo = {
 diff --git a/include/hw/riscv/virt.h b/include/hw/riscv/virt.h
-index 7b4c2c8b7d..ff59606805 100644
+index 18a2a323..12400e35 100644
 --- a/include/hw/riscv/virt.h
 +++ b/include/hw/riscv/virt.h
 @@ -64,6 +64,7 @@ struct RISCVVirtState {
@@ -203,6 +192,3 @@ index 7b4c2c8b7d..ff59606805 100644
  };
  
  enum {
--- 
-2.51.0
-
