@@ -11,8 +11,8 @@
   };
 
   nixConfig = {
-    extra-substituters = [ "https://attic.s.ihavenojob.work/shogo" ];
-    extra-trusted-public-keys = [ "shogo:R9ZWo9iGw8E0X6G24R7XLPH0UeE3VZ/WFi2+D0Kmud4=" ];
+    extra-substituters = [ "https://niks3.s.ihavenojob.work" ];
+    extra-trusted-public-keys = [ "niks3-cache:RW+9UW/AgeDvEawJndPbzNVYQcDPjXA4J23srAi5+sE=" ];
   };
 
   outputs =
