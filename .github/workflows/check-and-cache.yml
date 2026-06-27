@@ -31,4 +31,4 @@ jobs:
           niks3-bin: ${{ steps.niks3.outputs.store-path }}/bin/niks3
 
       - name: Run checks
-        run: nix flake check
+        run: nix run .#omnix ci
