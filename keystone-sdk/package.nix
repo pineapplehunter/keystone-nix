@@ -22,7 +22,9 @@ stdenv.mkDerivation {
   postPatch = ''
     cd sdk
     substituteInPlace macros.cmake \
-      --replace-fail 'riscv''${bits}-buildroot-linux-gnu-' "${stdenv.cc.targetPrefix}" 
+      --replace-fail 'riscv''${bits}-buildroot-linux-gnu-' "${stdenv.cc.targetPrefix}"
+    substituteInPlace src/verifier/json11.cpp \
+      --replace-fail '#include <cassert>' $'#include <cassert>\n#include <cstdint>'
   '';
 
   cmakeFlags = [

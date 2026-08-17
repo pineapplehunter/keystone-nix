@@ -16,7 +16,9 @@ let
   };
 in
 stdenv.mkDerivation {
-  name = "hello.ke";
+  pname = "hello-ke";
+  version = "0-unstable";
+
   src = ./.;
   nativeBuildInputs = [
     cmake
@@ -28,11 +30,10 @@ stdenv.mkDerivation {
     keystone.sdk
   ];
   postInstall = ''
-    ${../../hello.ke} --noexec --target $out/lib
     wrapProgram $out/bin/hello-runner \
       --add-flag $out/share/hello \
       --add-flag ${runtime.rt} \
-      --add-flag $out/lib/loader.bin
+      --add-flag ${runtime.loader}
   '';
 
   # dontStrip = true;
