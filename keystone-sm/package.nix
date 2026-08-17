@@ -38,10 +38,6 @@ stdenv.mkDerivation {
       patch -p1 < ${./opensbi-change-basename.patch}
       patch -p1 < ${./opensbi-firmware-secure-boot.patch}
     )
-    (
-      cd keystone
-      patch -p1 < ${./print_enclave.patch}
-    )
     makeFlagsArray+=(
       "KEYSTONE_SM=$(pwd)/keystone/sm"
       "PLATFORM_DIR=$(pwd)/keystone/sm/plat/"
