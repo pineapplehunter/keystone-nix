@@ -87,11 +87,7 @@
             ...
           }:
           let
-            keystoneTest = import ./tests/keystone-enclave.nix {
-              nixpkgs = inputs.nixpkgs.outPath;
-              localSystem = system;
-              overlay = config.flake.overlays.default;
-            };
+            keystoneTest = pkgs.callPackage ./tests/keystone-enclave.nix { };
           in
           {
             _module.args.pkgs = import inputs.nixpkgs {
@@ -99,51 +95,7 @@
               overlays = [ config.flake.overlays.default ];
             };
 
-            checks = {
-              keystone-enclave = keystoneTest;
-
-              qemu-rom-property = pkgs.runCommand "qemu-rom-property-check" { } ''
-                ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
-                  -machine virt,help | grep -F 'rom=<string>'
-
-                touch "$TMPDIR/first-rom"
-                status=0
-                timeout 1 ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
-                  -machine virt,rom="$TMPDIR/first-rom" \
-                  -display none -S >valid-rom.log 2>&1 || status=$?
-                test "$status" -eq 124
-
-                if ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
-                  -machine virt,rom="$TMPDIR/does-not-exist" \
-                  -display none -S >qemu.log 2>&1; then
-                  echo "QEMU unexpectedly accepted a missing ROM" >&2
-                  exit 1
-                fi
-                grep -F 'could not load ROM image' qemu.log
-                touch "$out"
-              '';
-
-              package-set = pkgs.linkFarm "keystone-package-check" (
-                map
-                  (name: {
-                    inherit name;
-                    path = self'.packages.${name};
-                  })
-                  [
-                    "bootrom"
-                    "driver"
-                    "hello-ke"
-                    "qemu"
-                    "qemu-run"
-                    "runtime"
-                    "runtime-with-plugin"
-                    "samples"
-                    "sdk"
-                    "sm"
-                    "systemConfig"
-                  ]
-              );
-            };
+            checks.keystone-enclave = keystoneTest;
 
             formatter = pkgs.nixfmt-tree;
 

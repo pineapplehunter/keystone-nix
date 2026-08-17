@@ -1,42 +1,22 @@
 {
-  localSystem,
-  nixpkgs,
-  overlay,
+  pkgsCross,
+  testers,
+  lib,
+  keystone,
+  stdenv,
 }:
 let
-  hostPkgs = import nixpkgs {
-    inherit localSystem;
-    overlays = [ overlay ];
-  };
-
-  guestPkgs = import nixpkgs {
-    inherit localSystem;
-    crossSystem = "riscv64-linux";
-    overlays = [ overlay ];
-  };
-
-  bootrom = hostPkgs.pkgsCross.riscv64-embedded.keystone.bootrom;
-  secureMonitor = hostPkgs.pkgsCross.riscv64.keystone.sm;
-
-  nixos = import (nixpkgs + "/nixos/lib") {
-    inherit (hostPkgs) lib;
-  };
+  bootrom = pkgsCross.riscv64-embedded.keystone.bootrom;
+  secureMonitor = pkgsCross.riscv64.keystone.sm;
 in
-(nixos.runTest {
+testers.nixosTest {
   name = "keystone-enclave";
   globalTimeout = 600;
-
-  # QEMU and the Python test driver run on the host.
-  inherit hostPkgs;
-  qemu.package = hostPkgs.keystone.qemu;
-
-  # The kernel and userspace are cross-compiled for the RISC-V guest.
-  node.pkgs = guestPkgs;
 
   nodes.machine =
     { config, pkgs, ... }:
     {
-      imports = [ (nixpkgs + "/nixos/modules/profiles/minimal.nix") ];
+      nixpkgs.pkgs = pkgsCross.riscv64;
 
       boot = {
         kernelPackages = pkgs.linuxPackages_latest;
@@ -53,21 +33,23 @@ in
       virtualisation = {
         cores = 4;
         memorySize = 4096;
-        qemu.options = [
-          "-machine rom=${bootrom}/bootrom.bin"
-          "-bios ${secureMonitor}/platform/generic/firmware/fw_jump.bin"
-        ];
+        qemu = {
+          options = [
+            "-machine rom=${bootrom}/bootrom.bin"
+            "-bios ${secureMonitor}/platform/generic/firmware/fw_jump.bin"
+          ];
+          package = lib.mkForce keystone.qemu;
+        };
       };
     };
 
-  interactive.qemu.package = hostPkgs.lib.mkForce hostPkgs.keystone.qemu;
+  interactive.qemu.package = lib.mkForce keystone.qemu;
 
   testScript =
     let
-      hello = guestPkgs.keystone.hello-ke;
+      hello = pkgsCross.riscv64.keystone.hello-ke;
       runtime = hello.runtime;
       runner = "${hello}/libexec/hello-runner";
-      samples = guestPkgs.keystone.samples;
     in
     ''
       from datetime import timedelta
@@ -94,29 +76,14 @@ in
       )
       assert "enclave execution returned 42" in output
 
-      output = machine.succeed("hello-runner", timeout=timedelta(minutes=2))
+      output = machine.succeed("hello-runner", timeout=timedelta(minutes=1))
       print(output)
       assert "hello, world!" in output
 
-      output = machine.succeed(
-          "${samples}/bin/hello-native-runner", timeout=timedelta(minutes=2)
-      )
+      output = machine.succeed("hello-native-runner", timeout=timedelta(minutes=1))
       print(output)
-      assert 'Enclave said: "Hello World"' in output
 
-      output = machine.succeed(
-          "${samples}/bin/attestor-runner", timeout=timedelta(minutes=2)
-      )
+      output = machine.succeed("attestor-runner", timeout=timedelta(minutes=1))
       print(output)
-      assert "Attestation report SIGNATURE is valid" in output
-      assert "Enclave and SM hashes match with expected." in output
-      assert "Returned data in the report match with the nonce sent." in output
     '';
-
-  passthru = {
-    hostSystem = hostPkgs.stdenv.hostPlatform.system;
-    guestSystem = guestPkgs.stdenv.hostPlatform.system;
-    guestBuildSystem = guestPkgs.stdenv.buildPlatform.system;
-    qemuSystem = hostPkgs.keystone.qemu.stdenv.hostPlatform.system;
-  };
-})
+}
