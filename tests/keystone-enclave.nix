@@ -52,23 +52,16 @@ in
 
       environment.systemPackages = [ pkgs.keystone.hello-ke ];
 
-      networking = {
-        dhcpcd.enable = false;
-        useDHCP = false;
-      };
-
       # Avoid unrelated cross-builds in this test.
       system.disableInstallerTools = true;
       systemd.package = pkgs.systemd.override {
         withImportd = false;
         withSysupdate = false;
       };
-      security.wrappers = lib.mkForce { };
 
       virtualisation = {
         cores = 4;
         memorySize = 4096;
-        vlans = [ ];
         qemu.options = [
           "-machine rom=${bootrom}/bootrom.bin"
           "-bios ${secureMonitor}/platform/generic/firmware/fw_jump.bin"
@@ -120,8 +113,4 @@ in
     guestBuildSystem = guestPkgs.stdenv.buildPlatform.system;
     qemuSystem = hostPkgs.keystone.qemu.stdenv.hostPlatform.system;
   };
-}).config.rawTestDerivation.overrideAttrs
-  (_: {
-    # qemu-system-riscv64 uses software emulation rather than KVM.
-    requiredSystemFeatures = [ "nixos-test" ];
-  })
+})
