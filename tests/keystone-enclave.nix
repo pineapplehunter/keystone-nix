@@ -24,7 +24,7 @@ let
 in
 (nixos.runTest {
   name = "keystone-enclave";
-  globalTimeout = 300;
+  globalTimeout = 600;
 
   # QEMU and the Python test driver run on the host.
   inherit hostPkgs;
@@ -34,12 +34,7 @@ in
   node.pkgs = guestPkgs;
 
   nodes.machine =
-    {
-      config,
-      lib,
-      pkgs,
-      ...
-    }:
+    { config, pkgs, ... }:
     {
       imports = [ (nixpkgs + "/nixos/modules/profiles/minimal.nix") ];
 
@@ -50,14 +45,10 @@ in
         loader.grub.enable = false;
       };
 
-      environment.systemPackages = [ pkgs.keystone.hello-ke ];
-
-      # Avoid unrelated cross-builds in this test.
-      system.disableInstallerTools = true;
-      systemd.package = pkgs.systemd.override {
-        withImportd = false;
-        withSysupdate = false;
-      };
+      environment.systemPackages = [
+        pkgs.keystone.hello-ke
+        pkgs.keystone.samples
+      ];
 
       virtualisation = {
         cores = 4;
@@ -76,6 +67,7 @@ in
       hello = guestPkgs.keystone.hello-ke;
       runtime = hello.runtime;
       runner = "${hello}/libexec/hello-runner";
+      samples = guestPkgs.keystone.samples;
     in
     ''
       from datetime import timedelta
@@ -105,6 +97,20 @@ in
       output = machine.succeed("hello-runner", timeout=timedelta(minutes=2))
       print(output)
       assert "hello, world!" in output
+
+      output = machine.succeed(
+          "${samples}/bin/hello-native-runner", timeout=timedelta(minutes=2)
+      )
+      print(output)
+      assert 'Enclave said: "Hello World"' in output
+
+      output = machine.succeed(
+          "${samples}/bin/attestor-runner", timeout=timedelta(minutes=2)
+      )
+      print(output)
+      assert "Attestation report SIGNATURE is valid" in output
+      assert "Enclave and SM hashes match with expected." in output
+      assert "Returned data in the report match with the nonce sent." in output
     '';
 
   passthru = {

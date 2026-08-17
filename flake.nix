@@ -75,6 +75,7 @@
                     postInstall = (old.postInstall or "") + "rm -f $out/bin/qemu-kvm";
                   });
               hello-ke = final.callPackage ./examples/hello/package.nix { };
+              samples = final.callPackage ./examples/upstream/package.nix { };
             };
         };
 
@@ -136,6 +137,7 @@
                     "qemu-run"
                     "runtime"
                     "runtime-with-plugin"
+                    "samples"
                     "sdk"
                     "sm"
                     "systemConfig"
@@ -164,6 +166,7 @@
                   sdk
                   runtime
                   hello-ke
+                  samples
                   ;
                 inherit (pkgs.pkgsCross.riscv64-embedded.keystone) bootrom;
 

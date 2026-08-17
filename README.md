@@ -39,7 +39,7 @@ definition as the automated enclave test. Start the VM and attach to its serial
 console at the prompt:
 
 ```python
-machine.start()
+start_all()
 machine.shell_interact()
 ```
 
@@ -53,15 +53,6 @@ overridden without rebuilding, for example:
 QEMU_OPTS='-m 2G -smp 2' nix run
 ```
 
-Additional user-network options can be supplied through `QEMU_NET_OPTS`. For
-example, a loopback-only forwarding rule is:
-
-```console
-QEMU_NET_OPTS='hostfwd=tcp:127.0.0.1:10022-:22' nix run
-```
-
-The demo image does not enable SSH by default. If a custom configuration does,
-QEMU reports a bind failure when the requested host port is already occupied.
 `TMPDIR`/`XDG_RUNTIME_DIR` control test-driver temporary state, and
 `--keep-machine-state` can be passed to retain reusable VM state.
 
@@ -74,7 +65,8 @@ nix build .#sm                 # OpenSBI firmware with Keystone SM
 nix build .#sdk                # Keystone host/enclave SDK
 nix build .#runtime            # Eyrie runtime and raw loader
 nix build .#runtime-with-plugin
-nix build .#hello-ke           # hello enclave and hello-runner
+nix build .#hello-ke           # hardened hello enclave and hello-runner
+nix build .#samples            # upstream hello-native and attestation samples
 nix build .#qemu               # RISC-V-only QEMU with custom ROM support
 nix build .#systemConfig       # cross-compiled NixOS closure
 ```
@@ -99,8 +91,9 @@ nix build .#checks.x86_64-linux.keystone-enclave --no-link
 
 The enclave test boots through the Keystone test boot ROM and security monitor,
 then verifies runner argument and initialization failures, an enclave execution
-failure, driver/device setup, and successful hello-world output. `nix develop`
-provides the cross-binutils wrapper and ShellCheck.
+failure, driver/device setup, both hello-world programs, and the complete
+attestation flow. `nix develop` provides the cross-binutils wrapper and
+ShellCheck.
 
 When updating `flake.lock`:
 
@@ -115,7 +108,7 @@ When updating `flake.lock`:
 | Area | Status |
 | --- | --- |
 | Keystone driver, SDK, Eyrie runtime | Built from the pinned source |
-| Hello eapp | Built by Nix and executed in the VM test |
+| Hello, hello-native, and attestation samples | Built by Nix and executed in the VM test |
 | Custom QEMU ROM property and Keystone boot ROM | Booted by the enclave VM test; property/error paths checked separately |
 | Keystone security monitor | Integrated with OpenSBI 1.1 |
 | Firmware measurement flow | Experimental software simulation with public test keys |
