@@ -3,7 +3,6 @@
   testers,
   lib,
   keystone,
-  stdenv,
 }:
 let
   bootrom = pkgsCross.riscv64-embedded.keystone.bootrom;
@@ -65,9 +64,7 @@ testers.nixosTest {
       machine.succeed("modprobe keystone-driver")
       machine.succeed("test -c /dev/keystone_enclave")
 
-      output = machine.fail(
-          "${runner} /does-not-exist ${runtime.rt} ${runtime.loader} 2>&1"
-      )
+      output = machine.fail("${runner} /does-not-exist ${runtime.rt} ${runtime.loader} 2>&1")
       assert "cannot read enclave input" in output
 
       output = machine.fail(

@@ -19,6 +19,9 @@
     { flake-parts, ... }@inputs:
     flake-parts.lib.mkFlake { inherit inputs; } (
       { config, ... }:
+      let
+        flake-config = config;
+      in
       {
         # This is the host platform continuously exercised by CI. All Keystone
         # guest artifacts are cross-compiled for RISC-V.
@@ -27,12 +30,9 @@
           "x86_64-linux"
         ];
 
-        flake.nixosModules.rootfs = ./rootfs-module.nix;
-
         flake.nixosConfigurations.keystone = inputs.nixpkgs.lib.nixosSystem {
           system = null;
           modules = [
-            config.flake.nixosModules.rootfs
             { nixpkgs.overlays = [ config.flake.overlays.default ]; }
             ./configuration.nix
           ];
@@ -66,7 +66,6 @@
               driver = driverFor final.linuxPackages;
               bootrom = final.callPackage ./keystone-bootrom/package.nix { };
               sm = final.callPackage ./keystone-sm/package.nix { inherit opensbi; };
-              kernelPackages = final.callPackage ./keystone-kernel/package.nix { };
               sdk = final.callPackage ./keystone-sdk/package.nix { };
               runtime = final.callPackage ./keystone-runtime/package.nix { };
               qemu =
@@ -86,7 +85,7 @@
           {
             system,
             pkgs,
-            self',
+            config,
             ...
           }:
           let
@@ -95,7 +94,7 @@
           {
             _module.args.pkgs = import inputs.nixpkgs {
               inherit system;
-              overlays = [ config.flake.overlays.default ];
+              overlays = [ flake-config.flake.overlays.default ];
             };
 
             checks.keystone-enclave = keystoneTest;
@@ -104,7 +103,7 @@
 
             packages =
               let
-                osConfig = config.flake.nixosConfigurations.keystone.extendModules {
+                osConfig = flake-config.flake.nixosConfigurations.keystone.extendModules {
                   modules = [
                     {
                       nixpkgs.localSystem.system = pkgs.stdenv.buildPlatform.system;
@@ -114,7 +113,7 @@
                 };
               in
               {
-                default = self'.packages.qemu-run;
+                default = config.packages.qemu-run;
                 inherit (pkgs.pkgsCross.riscv64.keystone)
                   driver
                   sm
@@ -136,15 +135,11 @@
                 systemConfig = osConfig.config.system.build.toplevel;
 
                 qemu-run = keystoneTest.driverInteractive;
-
-                # CI tools are explicit outputs rather than accidental exports
-                # through the entire nixpkgs legacyPackages set.
-                inherit (pkgs) niks3 omnix;
               };
 
             apps.default = {
               type = "app";
-              program = "${self'.packages.qemu-run}/bin/nixos-test-driver";
+              program = "${config.packages.qemu-run}/bin/nixos-test-driver";
               meta.description = "Launch an interactive Keystone NixOS test VM";
             };
 
