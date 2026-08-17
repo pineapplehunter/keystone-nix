@@ -86,6 +86,12 @@
               inherit system;
               overlays = [ config.flake.overlays.default ];
             };
+            checks.keystone-enclave = import ./tests/keystone-enclave.nix {
+              nixpkgs = inputs.nixpkgs.outPath;
+              localSystem = system;
+              overlay = config.flake.overlays.default;
+            };
+
             packages =
               let
                 osConfig = config.flake.nixosConfigurations.keystone.extendModules {
