@@ -21,7 +21,8 @@ stdenv.mkDerivation (finalAttrs: {
   cmakeFlags = [
     (lib.cmakeFeature "KEYSTONE_SDK_DIR" "${keystone.sdk}")
     (lib.cmakeBool "INTERNAL_STRACE" internalStrace)
-  ] ++ map (p: lib.cmakeBool (lib.toUpper p) true) plugins;
+  ]
+  ++ map (p: lib.cmakeBool (lib.toUpper p) true) plugins;
 
   postPatch = ''
     cd runtime

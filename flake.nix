@@ -92,6 +92,8 @@
               overlay = config.flake.overlays.default;
             };
 
+            formatter = pkgs.nixfmt-tree;
+
             packages =
               let
                 osConfig = config.flake.nixosConfigurations.keystone.extendModules {

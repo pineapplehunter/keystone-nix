@@ -83,7 +83,8 @@ in
     guestBuildSystem = guestPkgs.stdenv.buildPlatform.system;
     qemuSystem = hostPkgs.keystone.qemu.stdenv.hostPlatform.system;
   };
-}).config.rawTestDerivation.overrideAttrs (_: {
-  # qemu-system-riscv64 uses software emulation rather than KVM.
-  requiredSystemFeatures = [ "nixos-test" ];
-})
+}).config.rawTestDerivation.overrideAttrs
+  (_: {
+    # qemu-system-riscv64 uses software emulation rather than KVM.
+    requiredSystemFeatures = [ "nixos-test" ];
+  })
