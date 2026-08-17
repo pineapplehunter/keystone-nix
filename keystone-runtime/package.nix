@@ -42,11 +42,11 @@ stdenv.mkDerivation (finalAttrs: {
 
   stripDebugList = [ "share" ];
 
-  hardeningDisable = [ "stackprotector" ];
+  hardeningDisable = [ "all" ];
 
-  makeFlags = ["VERBOSE=1"];
+  makeFlags = [ "VERBOSE=1" ];
 
-  env.NIX_CFLAGS_COMPILE="-march=rv64g_zifencei_zicsr -mabi=lp64d";
+  env.NIX_CFLAGS_COMPILE = "-march=rv64g_zifencei_zicsr -mabi=lp64d";
 
   passthru = {
     loader = "${finalAttrs.finalPackage}/share/loader.bin";
