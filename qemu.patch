@@ -1,5 +1,5 @@
 diff --git a/hw/riscv/boot.c b/hw/riscv/boot.c
-index e5490bed..ba9df7df 100644
+index e5490be..06ba5c3 100644
 --- a/hw/riscv/boot.c
 +++ b/hw/riscv/boot.c
 @@ -26,6 +26,7 @@
@@ -10,7 +10,7 @@ index e5490bed..ba9df7df 100644
  #include "elf.h"
  #include "system/device_tree.h"
  #include "system/qtest.h"
-@@ -438,52 +439,82 @@ void riscv_setup_rom_reset_vec(MachineState *machine, RISCVHartArrayState *harts
+@@ -438,52 +439,86 @@ void riscv_setup_rom_reset_vec(MachineState *machine, RISCVHartArrayState *harts
      int i;
      uint32_t start_addr_hi32 = 0x00000000;
      uint32_t fdt_load_addr_hi32 = 0x00000000;
@@ -56,31 +56,32 @@ index e5490bed..ba9df7df 100644
 -         */
 -        reset_vec[2] = 0x00000013;   /*     addi   x0, x0, 0 */
 -    }
-+        size_t bl_size = load_image_size(rvs->rom, rom, rom_size);
-+        if (bl_size == -1) {
-+            error_report("could not get rom size");
++        ssize_t bl_size = load_image_size(rvs->rom, rom, rom_size);
++        if (bl_size < 0) {
++            error_report("could not load ROM image");
 +            exit(1);
 +        }
 +
 +        rom_add_blob_fixed_as("mrom.reset", rom, bl_size,
-+                                rom_base, &address_space_memory);
++                              rom_base, &address_space_memory);
 +        g_free(rom);
- 
--    /* copy in the reset vector in little_endian byte order */
--    for (i = 0; i < ARRAY_SIZE(reset_vec); i++) {
--        reset_vec[i] = cpu_to_le32(reset_vec[i]);
-+        /* we also need the fdt */
-+        if (fdt_pack(machine->fdt) ||
-+                fdt_totalsize(machine->fdt) > rom_size - bl_size) {
-+            error_report("not enough space to store device tree");
++
++        /* Place the FDT after the image, including alignment in the bound. */
++        size_t fdt_offset = QEMU_ALIGN_UP((size_t)bl_size, 4);
++        size_t fdt_size;
++
++        if (fdt_pack(machine->fdt)) {
++            error_report("could not pack device tree");
++            exit(1);
++        }
++        fdt_size = fdt_totalsize(machine->fdt);
++        if (fdt_offset > rom_size || fdt_size > rom_size - fdt_offset) {
++            error_report("not enough ROM space to store device tree");
 +            exit(1);
 +        }
 +
-+        // word-aligned fdt location
-+        size_t fdt_loc = rom_base + bl_size;
-+        fdt_loc = ((fdt_loc + 0x4 - 1) & ~(0x4 - 1));
-+        rom_add_blob_fixed_as("mrom.fdt", machine->fdt, fdt_totalsize(machine->fdt),
-+                                fdt_loc, &address_space_memory);
++        rom_add_blob_fixed_as("mrom.fdt", machine->fdt, fdt_size,
++                              rom_base + fdt_offset, &address_space_memory);
 +
 +    } else {
 +        if (!riscv_is_32bit(harts)) {
@@ -116,7 +117,11 @@ index e5490bed..ba9df7df 100644
 +             */
 +            reset_vec[2] = 0x00000013;   /*     addi   x0, x0, 0 */
 +        }
+-
 +
+-    /* copy in the reset vector in little_endian byte order */
+-    for (i = 0; i < ARRAY_SIZE(reset_vec); i++) {
+-        reset_vec[i] = cpu_to_le32(reset_vec[i]);
 +        /* copy in the reset vector in little_endian byte order */
 +        for (i = 0; i < ARRAY_SIZE(reset_vec); i++) {
 +            reset_vec[i] = cpu_to_le32(reset_vec[i]);
@@ -136,7 +141,7 @@ index e5490bed..ba9df7df 100644
  
  void riscv_setup_direct_kernel(hwaddr kernel_addr, hwaddr fdt_addr)
 diff --git a/hw/riscv/virt.c b/hw/riscv/virt.c
-index a1c323e6..c583e580 100644
+index a1c323e..8e46135 100644
 --- a/hw/riscv/virt.c
 +++ b/hw/riscv/virt.c
 @@ -81,7 +81,7 @@ static bool virt_aclint_allowed(void)
@@ -148,7 +153,7 @@ index a1c323e6..c583e580 100644
      [VIRT_TEST] =         {   0x100000,        0x1000 },
      [VIRT_RTC] =          {   0x101000,        0x1000 },
      [VIRT_CLINT] =        {  0x2000000,       0x10000 },
-@@ -1871,6 +1871,20 @@ static void virt_set_acpi(Object *obj, Visitor *v, const char *name,
+@@ -1871,6 +1871,27 @@ static void virt_set_acpi(Object *obj, Visitor *v, const char *name,
      visit_type_OnOffAuto(v, name, &s->acpi, errp);
  }
  
@@ -166,10 +171,17 @@ index a1c323e6..c583e580 100644
 +    rvs->rom = g_strdup(value);
 +}
 +
++static void virt_machine_instance_finalize(Object *obj)
++{
++    RISCVVirtState *rvs = RISCV_VIRT_MACHINE(obj);
++
++    g_free(rvs->rom);
++}
++
  static HotplugHandler *virt_machine_get_hotplug_handler(MachineState *machine,
                                                          DeviceState *dev)
  {
-@@ -1977,6 +1991,10 @@ static void virt_machine_class_init(ObjectClass *oc, const void *data)
+@@ -1977,6 +1998,10 @@ static void virt_machine_class_init(ObjectClass *oc, const void *data)
                                NULL, NULL);
      object_class_property_set_description(oc, "iommu-sys",
                                            "Enable IOMMU platform device");
@@ -180,8 +192,16 @@ index a1c323e6..c583e580 100644
  }
  
  static const TypeInfo virt_machine_typeinfo = {
+@@ -1985,6 +2010,7 @@ static const TypeInfo virt_machine_typeinfo = {
+     .class_init = virt_machine_class_init,
+     .instance_init = virt_machine_instance_init,
+     .instance_size = sizeof(RISCVVirtState),
++    .instance_finalize = virt_machine_instance_finalize,
+     .interfaces = (const InterfaceInfo[]) {
+          { TYPE_HOTPLUG_HANDLER },
+          { }
 diff --git a/include/hw/riscv/virt.h b/include/hw/riscv/virt.h
-index 18a2a323..12400e35 100644
+index 18a2a32..12400e3 100644
 --- a/include/hw/riscv/virt.h
 +++ b/include/hw/riscv/virt.h
 @@ -64,6 +64,7 @@ struct RISCVVirtState {
