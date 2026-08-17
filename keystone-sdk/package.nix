@@ -7,8 +7,7 @@
 }:
 stdenv.mkDerivation {
   pname = "keystone-sdk";
-  version = "0";
-  inherit (keystone) src;
+  inherit (keystone) src version;
 
   patches = [
     ./stdint.patch
@@ -33,4 +32,12 @@ stdenv.mkDerivation {
   ];
 
   hardeningDisable = [ "stackprotector" ];
+
+  meta = {
+    description = "Host and enclave SDK for Keystone";
+    homepage = "https://keystone-enclave.org";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ pineapplehunter ];
+    platforms = [ "riscv64-linux" ];
+  };
 }

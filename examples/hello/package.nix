@@ -1,6 +1,7 @@
 {
   stdenv,
   cmake,
+  lib,
   glibc,
   makeBinaryWrapper,
   keystone,
@@ -12,12 +13,11 @@ let
       "linux_syscall"
       "env_setup"
     ];
-    internalStrace = true;
   };
 in
 stdenv.mkDerivation {
   pname = "hello-ke";
-  version = "0-unstable";
+  inherit (keystone) version;
 
   src = ./.;
   nativeBuildInputs = [
@@ -30,13 +30,22 @@ stdenv.mkDerivation {
     keystone.sdk
   ];
   postInstall = ''
-    wrapProgram $out/bin/hello-runner \
+    mkdir -p $out/libexec
+    mv $out/bin/hello-runner $out/libexec/hello-runner
+    makeWrapper $out/libexec/hello-runner $out/bin/hello-runner \
       --add-flag $out/share/hello \
       --add-flag ${runtime.rt} \
       --add-flag ${runtime.loader}
   '';
 
-  # dontStrip = true;
-  # cmakeBuildType = "RelWithDebInfo";
-  # makeFlags = [ "VERBOSE=1" ];
+  passthru = { inherit runtime; };
+
+  meta = {
+    description = "Keystone hello-world enclave and host runner";
+    homepage = "https://keystone-enclave.org";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ pineapplehunter ];
+    mainProgram = "hello-runner";
+    platforms = [ "riscv64-linux" ];
+  };
 }

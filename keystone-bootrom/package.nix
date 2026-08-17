@@ -1,11 +1,12 @@
 {
   stdenv,
+  lib,
   keystone,
 }:
 
 stdenv.mkDerivation {
   pname = "keystone-bootrom";
-  version = "0-unstable";
+  inherit (keystone) version;
 
   inherit (keystone) src;
 
@@ -19,4 +20,15 @@ stdenv.mkDerivation {
   '';
 
   dontInstall = true;
+
+  meta = {
+    description = "Keystone test boot ROM for RISC-V";
+    homepage = "https://keystone-enclave.org";
+    license = [
+      lib.licenses.bsd3
+      lib.licenses.zlib
+    ];
+    maintainers = with lib.maintainers; [ pineapplehunter ];
+    platforms = [ "riscv64-none" ];
+  };
 }

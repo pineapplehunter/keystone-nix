@@ -26,9 +26,7 @@
 
   boot = {
     # adds keystone-driver kernel module to the system
-    extraModulePackages = [
-      (config.boot.kernelPackages.callPackage ./keystone-driver/package.nix { })
-    ];
+    extraModulePackages = [ (pkgs.keystone.driverFor config.boot.kernelPackages) ];
     # uncomment next line to load keystone-driver by default
     kernelModules = [ "keystone-driver" ];
     blacklistedKernelModules = [
@@ -60,10 +58,11 @@
     vim
     which
 
-    (callPackage ./examples/hello/package.nix { })
+    keystone.hello-ke
   ];
 
   # password is "sifive"
   users.users.root.initialHashedPassword = "$y$j9T$qYGfDRIz2NmouNl3h/L6F.$aTymFw.ljxMmR7DpUGoHEevdPL4pX9kFftAUngxTc98";
-  system.stateVersion = config.system.nixos.release;
+  # Update only after reviewing the corresponding NixOS state migrations.
+  system.stateVersion = "25.05";
 }

@@ -1,5 +1,5 @@
 {
-  description = "A very basic flake";
+  description = "Nix packages and VM tests for the Keystone RISC-V enclave stack";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
@@ -20,14 +20,11 @@
     flake-parts.lib.mkFlake { inherit inputs; } (
       { config, ... }:
       {
-        systems = [
-          "aarch64-linux"
-          "x86_64-linux"
-        ];
+        # This is the host platform continuously exercised by CI. All Keystone
+        # guest artifacts are cross-compiled for RISC-V.
+        systems = [ "x86_64-linux" ];
 
-        flake.nixosModules = {
-          rootfs = ./rootfs-module.nix;
-        };
+        flake.nixosModules.rootfs = ./rootfs-module.nix;
 
         flake.nixosConfigurations.keystone = inputs.nixpkgs.lib.nixosSystem {
           system = null;
@@ -39,39 +36,46 @@
         };
 
         flake.overlays.default = final: prev: {
-          keystone = {
-            driver = final.linuxPackages.callPackage ./keystone-driver/package.nix { };
-            bootrom = final.callPackage ./keystone-bootrom/package.nix { };
-            sm = final.callPackage ./keystone-sm/package.nix { };
-            kernelPackages = final.callPackage ./keystone-kernel/package.nix { };
-            sdk = final.callPackage ./keystone-sdk/package.nix { };
-            runtime = final.callPackage ./keystone-runtime/package.nix { };
-            qemu =
-              (final.qemu.override {
-                hostCpuTargets = [ "riscv64-softmmu" ];
-              }).overrideAttrs
-                (old: {
-                  patches = [ ./qemu.patch ];
-                  postInstall = (old.postInstall or "") + "rm $out/bin/qemu-kvm";
-                });
-            hello-ke = final.callPackage ./examples/hello/package.nix { };
-            src = inputs.keystone-src;
-          };
-          nix-ld = prev.nix-ld.overrideAttrs (old: {
-            patches = (old.patches or [ ]) ++ [ ./nix-ld-riscv.patch ];
-            postInstall = (old.postInstall or "") + ''
-              echo /lib/ld-linux-riscv64-lp64d.so.1 > $out/nix-support/ldpath
-            '';
-          });
-          opensbi_1_1 = prev.opensbi.overrideAttrs rec {
-            version = "1.1";
-            src = final.fetchFromGitHub {
-              owner = "riscv-software-src";
-              repo = "opensbi";
-              tag = "v${version}";
-              hash = "sha256-k6f4/lWY/f7qqk0AFY4tdEi4cDilSv/jngaJYhKFlnY=";
+          keystone =
+            let
+              # Keystone's OpenSBI integration targets the pre-domain API from
+              # 1.1. Keep this private to Keystone instead of replacing the
+              # nixpkgs OpenSBI package for every overlay consumer.
+              sourceDate = inputs.keystone-src.lastModifiedDate;
+              opensbi = prev.opensbi.overrideAttrs rec {
+                version = "1.1";
+                src = final.fetchFromGitHub {
+                  owner = "riscv-software-src";
+                  repo = "opensbi";
+                  tag = "v${version}";
+                  hash = "sha256-k6f4/lWY/f7qqk0AFY4tdEi4cDilSv/jngaJYhKFlnY=";
+                };
+              };
+            in
+            rec {
+              version = "0-unstable-${builtins.substring 0 4 sourceDate}-${builtins.substring 4 2 sourceDate}-${
+                builtins.substring 6 2 sourceDate
+              }";
+              src = inputs.keystone-src;
+              inherit opensbi;
+
+              driverFor = kernelPackages: kernelPackages.callPackage ./keystone-driver/package.nix { };
+              driver = driverFor final.linuxPackages;
+              bootrom = final.callPackage ./keystone-bootrom/package.nix { };
+              sm = final.callPackage ./keystone-sm/package.nix { inherit opensbi; };
+              kernelPackages = final.callPackage ./keystone-kernel/package.nix { };
+              sdk = final.callPackage ./keystone-sdk/package.nix { };
+              runtime = final.callPackage ./keystone-runtime/package.nix { };
+              qemu =
+                (final.qemu.override {
+                  hostCpuTargets = [ "riscv64-softmmu" ];
+                }).overrideAttrs
+                  (old: {
+                    patches = (old.patches or [ ]) ++ [ ./qemu.patch ];
+                    postInstall = (old.postInstall or "") + "rm -f $out/bin/qemu-kvm";
+                  });
+              hello-ke = final.callPackage ./examples/hello/package.nix { };
             };
-          };
         };
 
         perSystem =
@@ -81,15 +85,69 @@
             self',
             ...
           }:
+          let
+            keystoneTest = import ./tests/keystone-enclave.nix {
+              nixpkgs = inputs.nixpkgs.outPath;
+              localSystem = system;
+              overlay = config.flake.overlays.default;
+            };
+            interactiveScript = pkgs.writeText "keystone-interactive.py" ''
+              machine.start()
+              try:
+                  machine.shell_interact()
+              finally:
+                  machine.shutdown()
+            '';
+          in
           {
             _module.args.pkgs = import inputs.nixpkgs {
               inherit system;
               overlays = [ config.flake.overlays.default ];
             };
-            checks.keystone-enclave = import ./tests/keystone-enclave.nix {
-              nixpkgs = inputs.nixpkgs.outPath;
-              localSystem = system;
-              overlay = config.flake.overlays.default;
+
+            checks = {
+              keystone-enclave = keystoneTest;
+
+              qemu-rom-property = pkgs.runCommand "qemu-rom-property-check" { } ''
+                ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
+                  -machine virt,help | grep -F 'rom=<string>'
+
+                touch "$TMPDIR/first-rom"
+                status=0
+                timeout 1 ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
+                  -machine virt,rom="$TMPDIR/first-rom" \
+                  -display none -S >valid-rom.log 2>&1 || status=$?
+                test "$status" -eq 124
+
+                if ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
+                  -machine virt,rom="$TMPDIR/does-not-exist" \
+                  -display none -S >qemu.log 2>&1; then
+                  echo "QEMU unexpectedly accepted a missing ROM" >&2
+                  exit 1
+                fi
+                grep -F 'could not load ROM image' qemu.log
+                touch "$out"
+              '';
+
+              package-set = pkgs.linkFarm "keystone-package-check" (
+                map
+                  (name: {
+                    inherit name;
+                    path = self'.packages.${name};
+                  })
+                  [
+                    "bootrom"
+                    "driver"
+                    "hello-ke"
+                    "qemu"
+                    "qemu-run"
+                    "runtime"
+                    "runtime-with-plugin"
+                    "sdk"
+                    "sm"
+                    "systemConfig"
+                  ]
+              );
             };
 
             formatter = pkgs.nixfmt-tree;
@@ -114,6 +172,9 @@
                   runtime
                   hello-ke
                   ;
+                inherit (pkgs.pkgsCross.riscv64-embedded.keystone) bootrom;
+
+                qemu = pkgs.keystone.qemu;
                 runtime-with-plugin = pkgs.pkgsCross.riscv64.keystone.runtime.override {
                   plugins = [
                     "io_syscall"
@@ -121,52 +182,43 @@
                     "env_setup"
                   ];
                 };
-                inherit (pkgs.pkgsCross.riscv64-embedded.keystone) bootrom;
                 systemConfig = osConfig.config.system.build.toplevel;
-                qemu-run =
-                  let
-                    systemPkg = osConfig.config.system.build.toplevel;
-                    imgPkg = osConfig.config.system.build.rootfsImage;
-                    inherit (pkgs.pkgsCross.riscv64-embedded.keystone) bootrom;
-                    inherit (pkgs.pkgsCross.riscv64.keystone) sm;
-                  in
-                  pkgs.writeShellScriptBin "qemu-run" ''
-                    TMP=$(mktemp --suffix=.img)
-                    KEYSTONE_PORT=9821
-                    echo Extracting sd image file to $TMP
-                    zstd -f -d ${imgPkg} -o $TMP
-                    chmod +w $TMP
 
-                    cleanup(){
-                      echo Removing $TMP
-                      rm -f $TMP
-                    }
-                    trap cleanup SIGINT
-
-                    ${pkgs.keystone.qemu}/bin/qemu-system-riscv64 \
-                      -m 4G \
-                      -smp 4 \
-                      -machine virt,rom=${bootrom}/bootrom.bin \
-                      -bios ${sm}/platform/generic/firmware/fw_jump.bin \
-                      -kernel ${systemPkg}/kernel \
-                      -drive file=$TMP,format=raw \
-                      -netdev user,id=net0,net=192.168.100.1/24,dhcpstart=192.168.100.128,hostfwd=tcp::10022-:22 \
-                      -device virtio-net-device,netdev=net0 \
-                      -device virtio-rng-pci \
-                      -nographic \
-                      -append "console=ttyS0 ro root=/dev/vda init=${systemPkg}/init cma=1G" \
+                qemu-run = pkgs.writeShellApplication {
+                  name = "qemu-run";
+                  text = ''
+                    exec ${keystoneTest.driverInteractive}/bin/nixos-test-driver \
+                      --no-interactive \
+                      --test-script ${interactiveScript} \
                       "$@"
-                    cleanup
                   '';
+                  meta = {
+                    description = "Launch an interactive Keystone NixOS test VM";
+                    homepage = "https://keystone-enclave.org";
+                    license = pkgs.lib.licenses.mit;
+                    maintainers = with pkgs.lib.maintainers; [ pineapplehunter ];
+                    mainProgram = "qemu-run";
+                    platforms = [ system ];
+                  };
+                };
+
+                # CI tools are explicit outputs rather than accidental exports
+                # through the entire nixpkgs legacyPackages set.
+                inherit (pkgs) niks3 omnix;
               };
+
+            apps.default = {
+              type = "app";
+              program = "${self'.packages.qemu-run}/bin/qemu-run";
+              meta.description = "Launch an interactive Keystone NixOS test VM";
+            };
 
             devShells.default = pkgs.mkShellNoCC {
               packages = [
                 (pkgs.wrapBintoolsWith { bintools = pkgs.binutils-unwrapped-all-targets; })
+                pkgs.shellcheck
               ];
             };
-
-            legacyPackages = pkgs;
           };
       }
     );

@@ -1,14 +1,15 @@
 {
-  opensbi_1_1,
+  opensbi,
   stdenv,
+  lib,
   python3,
   keystone,
 }:
 stdenv.mkDerivation {
-  pname = "opensbi-kestone-sm";
-  inherit (opensbi_1_1) version;
+  pname = "opensbi-keystone-sm";
+  inherit (keystone) version;
   srcs = [
-    (opensbi_1_1.src.overrideAttrs { name = "opensbi"; })
+    (opensbi.src.overrideAttrs { name = "opensbi"; })
     (builtins.path {
       name = "keystone";
       path = keystone.src;
@@ -45,4 +46,17 @@ stdenv.mkDerivation {
       "$(pwd)/opensbi"
     )
   '';
+
+  meta = {
+    description = "OpenSBI 1.1 firmware with the Keystone security monitor";
+    homepage = "https://keystone-enclave.org";
+    license = with lib.licenses; [
+      bsd2
+      bsd3
+      mit
+      zlib
+    ];
+    maintainers = with lib.maintainers; [ pineapplehunter ];
+    platforms = [ "riscv64-linux" ];
+  };
 }

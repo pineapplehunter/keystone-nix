@@ -8,14 +8,15 @@
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "keystone-runtime";
-  version = "0";
-  inherit (keystone) src;
+  inherit (keystone) src version;
 
   patches = [ ./req_pages_define.patch ];
 
   nativeBuildInputs = [ cmake ];
 
-  # The raw loader relies on its unoptimized, position-independent layout.
+  # The raw loader copies only .text and depends on the upstream Debug layout.
+  # This is standalone enclave code rather than a host process; Nix's host
+  # hardening flags are incompatible with its linker/loader model.
   cmakeBuildType = "Debug";
 
   cmakeFlags = [
@@ -56,5 +57,13 @@ stdenv.mkDerivation (finalAttrs: {
   passthru = {
     loader = "${finalAttrs.finalPackage}/share/loader.bin";
     rt = "${finalAttrs.finalPackage}/share/eyrie-rt";
+  };
+
+  meta = {
+    description = "Eyrie runtime and loader for Keystone enclaves";
+    homepage = "https://keystone-enclave.org";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ pineapplehunter ];
+    platforms = [ "riscv64-linux" ];
   };
 })

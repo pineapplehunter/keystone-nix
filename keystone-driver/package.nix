@@ -5,8 +5,9 @@
   keystone,
 }:
 stdenv.mkDerivation (finalAttrs: {
-  name = "keystone-driver-${finalAttrs.version}-${kernel.version}";
-  version = "0-unstable";
+  pname = "keystone-driver";
+  inherit (keystone) version;
+  name = "${finalAttrs.pname}-${finalAttrs.version}-${kernel.version}";
 
   inherit (keystone) src;
 
@@ -34,7 +35,7 @@ stdenv.mkDerivation (finalAttrs: {
   meta = {
     description = "An Open Framework for Architecting Trusted Execution Environments";
     homepage = "https://keystone-enclave.org";
-    # license = with lib.licenses ;[gpl2 bsd2]; #
+    license = lib.licenses.bsd3;
     maintainers = with lib.maintainers; [ pineapplehunter ];
     platforms = [ "riscv64-linux" ];
   };
