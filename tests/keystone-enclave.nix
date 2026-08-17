@@ -33,12 +33,20 @@ in
   node.pkgs = guestPkgs;
 
   nodes.machine =
-    { lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       imports = [ (nixpkgs + "/nixos/modules/profiles/minimal.nix") ];
 
       boot = {
-        extraModulePackages = [ pkgs.keystone.driver ];
+        kernelPackages = pkgs.linuxPackages_latest;
+        extraModulePackages = [
+          (config.boot.kernelPackages.callPackage ../keystone-driver/package.nix { })
+        ];
         kernelModules = [ "keystone-driver" ];
         kernelParams = [ "cma=1G" ];
         loader.grub.enable = false;
@@ -67,6 +75,7 @@ in
     machine.start()
     machine.wait_for_unit("multi-user.target", timeout=300)
     machine.succeed("uname -m | grep -qx riscv64")
+    machine.succeed("uname -r | grep -q '^${guestPkgs.linuxPackages_latest.kernel.version}'")
     machine.succeed("test -c /dev/keystone_enclave")
     machine.succeed(
         "systemd-run --unit=hello-enclave --collect taskset -c 0 $(command -v hello-runner)"
