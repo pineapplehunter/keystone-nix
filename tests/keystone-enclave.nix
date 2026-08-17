@@ -47,12 +47,16 @@ in
         extraModulePackages = [
           (config.boot.kernelPackages.callPackage ../keystone-driver/package.nix { })
         ];
-        kernelModules = [ "keystone-driver" ];
-        kernelParams = [ "cma=1G" ];
+        kernelParams = [ "cma=256M" ];
         loader.grub.enable = false;
       };
 
       environment.systemPackages = [ pkgs.keystone.hello-ke ];
+
+      networking = {
+        dhcpcd.enable = false;
+        useDHCP = false;
+      };
 
       # Avoid unrelated cross-builds in this test.
       system.disableInstallerTools = true;
@@ -65,6 +69,7 @@ in
       virtualisation = {
         cores = 4;
         memorySize = 4096;
+        vlans = [ ];
         qemu.options = [
           "-bios ${secureMonitor}/platform/generic/firmware/fw_jump.bin"
         ];
@@ -72,18 +77,14 @@ in
     };
 
   testScript = ''
-    machine.start()
-    machine.wait_for_unit("multi-user.target", timeout=300)
-    machine.succeed("uname -m | grep -qx riscv64")
+    from datetime import timedelta
+    print(machine.succeed("uname -a"))
     machine.succeed("uname -r | grep -q '^${guestPkgs.linuxPackages_latest.kernel.version}'")
+    machine.succeed("modprobe keystone-driver")
     machine.succeed("test -c /dev/keystone_enclave")
-    machine.succeed(
-        "systemd-run --unit=hello-enclave --collect taskset -c 0 $(command -v hello-runner)"
-    )
-    machine.wait_until_succeeds(
-        "systemctl is-active --quiet hello-enclave && systemctl kill hello-enclave",
-        timeout=90,
-    )
+    output = machine.succeed("hello-runner", timeout=timedelta(minutes=2))
+    print(output)
+    assert "hello, world!" in output
   '';
 
   passthru = {

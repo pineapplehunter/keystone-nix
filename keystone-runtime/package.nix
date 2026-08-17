@@ -11,12 +11,12 @@ stdenv.mkDerivation (finalAttrs: {
   version = "0";
   inherit (keystone) src;
 
-  patches = [
-    ./req_pages_define.patch
-    ./norelax.patch
-  ];
+  patches = [ ./req_pages_define.patch ];
 
   nativeBuildInputs = [ cmake ];
+
+  # The raw loader relies on its unoptimized, position-independent layout.
+  cmakeBuildType = "Debug";
 
   cmakeFlags = [
     (lib.cmakeFeature "KEYSTONE_SDK_DIR" "${keystone.sdk}")
@@ -28,6 +28,9 @@ stdenv.mkDerivation (finalAttrs: {
     cd runtime
     substituteInPlace sys/entry.S \
       --replace-fail sbadaddr stval
+    substituteInPlace loader-binary/loader.S \
+      --replace-fail '  la sp, _estack' $'.option push\n.option norvc\n.option nopic\n.option norelax\n  la sp, _estack\n.option pop' \
+      --replace-fail '  la a0, root_page_table_storage' $'.option push\n.option norvc\n.option nopic\n.option norelax\n  la a0, root_page_table_storage\n.option pop'
   '';
 
   installPhase = ''
@@ -47,7 +50,8 @@ stdenv.mkDerivation (finalAttrs: {
 
   makeFlags = [ "VERBOSE=1" ];
 
-  env.NIX_CFLAGS_COMPILE = "-march=rv64g_zifencei_zicsr -mabi=lp64d";
+  # Only .text is copied into loader.bin, so it cannot contain a GOT.
+  env.NIX_CFLAGS_COMPILE = "-march=rv64g_zifencei_zicsr -mabi=lp64d -fno-pic -fno-pie";
 
   passthru = {
     loader = "${finalAttrs.finalPackage}/share/loader.bin";
