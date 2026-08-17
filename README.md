@@ -34,10 +34,17 @@ test-key Keystone boot chain into a production security boundary.
 nix run
 ```
 
-This launches the NixOS test driver's interactive serial console using the same
-VM definition as the automated enclave test. Exit the guest shell with
-<kbd>Ctrl-D</kbd>; the test driver then shuts down QEMU and removes its temporary
-state. Failures from QEMU and the driver are returned to the caller.
+This launches the NixOS test driver's interactive Python REPL using the same VM
+definition as the automated enclave test. Start the VM and attach to its serial
+console at the prompt:
+
+```python
+machine.start()
+machine.shell_interact()
+```
+
+Use <kbd>Ctrl-D</kbd> to leave the guest shell and again to leave the REPL. The
+test driver then shuts down QEMU and removes its temporary state.
 
 The VM defaults to 4 GiB RAM and 4 virtual CPUs. QEMU's final options can be
 overridden without rebuilding, for example:

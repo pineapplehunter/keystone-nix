@@ -91,13 +91,6 @@
               localSystem = system;
               overlay = config.flake.overlays.default;
             };
-            interactiveScript = pkgs.writeText "keystone-interactive.py" ''
-              machine.start()
-              try:
-                  machine.shell_interact()
-              finally:
-                  machine.shutdown()
-            '';
           in
           {
             _module.args.pkgs = import inputs.nixpkgs {
@@ -184,23 +177,7 @@
                 };
                 systemConfig = osConfig.config.system.build.toplevel;
 
-                qemu-run = pkgs.writeShellApplication {
-                  name = "qemu-run";
-                  text = ''
-                    exec ${keystoneTest.driverInteractive}/bin/nixos-test-driver \
-                      --no-interactive \
-                      --test-script ${interactiveScript} \
-                      "$@"
-                  '';
-                  meta = {
-                    description = "Launch an interactive Keystone NixOS test VM";
-                    homepage = "https://keystone-enclave.org";
-                    license = pkgs.lib.licenses.mit;
-                    maintainers = with pkgs.lib.maintainers; [ pineapplehunter ];
-                    mainProgram = "qemu-run";
-                    platforms = [ system ];
-                  };
-                };
+                qemu-run = keystoneTest.driverInteractive;
 
                 # CI tools are explicit outputs rather than accidental exports
                 # through the entire nixpkgs legacyPackages set.
@@ -209,7 +186,7 @@
 
             apps.default = {
               type = "app";
-              program = "${self'.packages.qemu-run}/bin/qemu-run";
+              program = "${self'.packages.qemu-run}/bin/nixos-test-driver";
               meta.description = "Launch an interactive Keystone NixOS test VM";
             };
 
