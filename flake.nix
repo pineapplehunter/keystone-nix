@@ -11,7 +11,7 @@
   };
 
   nixConfig = {
-    extra-substituters = [ "https://niks3.s.ihavenojob.work" ];
+    extra-substituters = [ "https://niks3.gweb.ihavenojob.work" ];
     extra-trusted-public-keys = [ "niks3-cache:RW+9UW/AgeDvEawJndPbzNVYQcDPjXA4J23srAi5+sE=" ];
   };
 
