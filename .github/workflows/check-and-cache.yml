@@ -13,7 +13,12 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-26.04-arm
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
@@ -22,7 +27,7 @@ jobs:
       - name: Build niks3
         id: niks3
         run: |
-          path=$(nix build .#niks3 --print-out-paths --no-link)
+          path=$(nix build nixpkgs#niks3 --print-out-paths --no-link --inputs-from .)
           echo "store-path=$path" >> "$GITHUB_OUTPUT"
 
       - uses: Mic92/niks3-action@12d3e320b2a99b7938f9634bd337cd9fec104609 # v1.1.0
@@ -31,4 +36,4 @@ jobs:
           niks3-bin: ${{ steps.niks3.outputs.store-path }}/bin/niks3
 
       - name: Run checks
-        run: nix run .#omnix ci
+        run: nix run --inputs-from . nixpkgs#omnix ci

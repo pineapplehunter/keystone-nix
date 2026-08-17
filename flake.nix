@@ -22,7 +22,10 @@
       {
         # This is the host platform continuously exercised by CI. All Keystone
         # guest artifacts are cross-compiled for RISC-V.
-        systems = [ "x86_64-linux" ];
+        systems = [
+          "aarch64-linux"
+          "x86_64-linux"
+        ];
 
         flake.nixosModules.rootfs = ./rootfs-module.nix;
 
