@@ -8,7 +8,8 @@ against a newly pinned revision.
 
 | Patch/change | Target | Reason | Upstream status |
 | --- | --- | --- | --- |
-| `qemu.patch` | QEMU 11.0.3 | Add the Keystone boot-ROM machine property, enlarge MROM, and place the generated FDT after the custom ROM. | Keystone-specific local feature; not upstream. Rebase and run `qemu-rom-property` whenever QEMU changes. |
+| `qemu.patch` | QEMU 11.0.3 | Add the Keystone boot-ROM machine property, enlarge MROM, and place the 8-byte-aligned generated FDT after the custom ROM. | Keystone-specific local feature; not upstream. Rebase and run `qemu-rom-property` whenever QEMU changes. |
+| `keystone-bootrom/dtb-align.patch` | Keystone boot ROM | Align `_dtb` to the 8-byte boundary required by libfdt; 4-byte alignment makes OpenSBI fail with `FDT_ERR_ALIGNMENT`. | Not upstream in the pinned source. |
 | `keystone-runtime/req_pages_define.patch` | Keystone runtime | Move `req_pages` before control flow that can jump past its declaration; required by current compilers. | Not upstream in the pinned source. |
 | `keystone-sdk/stdint.patch` | Keystone SDK | Include `<cstdint>` where fixed-width integer types are used by C++ headers. | Not upstream in the pinned source. A related include for `json11.cpp` is applied in `package.nix`. |
 | `keystone-sm/opensbi-change-basename.patch` | OpenSBI 1.1 | Replace a host `basename` shell call with GNU Make functions for a hermetic cross-build. | Local build-system fix; OpenSBI 1.1 is frozen here for Keystone API compatibility. |

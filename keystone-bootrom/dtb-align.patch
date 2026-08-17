@@ -1,0 +1,12 @@
+diff --git a/bootrom/bootloader.lds b/bootrom/bootloader.lds
+index a076300..6bddebd 100644
+--- a/bootrom/bootloader.lds
++++ b/bootrom/bootloader.lds
+@@ -12,6 +12,6 @@ SECTIONS
+     *(.reset)
+     *(*)
+   }
+-  . = ALIGN(4);
++  . = ALIGN(8);
+   PROVIDE( _dtb = . );
+ }

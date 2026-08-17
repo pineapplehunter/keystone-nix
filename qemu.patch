@@ -67,7 +67,7 @@ index e5490be..06ba5c3 100644
 +        g_free(rom);
 +
 +        /* Place the FDT after the image, including alignment in the bound. */
-+        size_t fdt_offset = QEMU_ALIGN_UP((size_t)bl_size, 4);
++        size_t fdt_offset = QEMU_ALIGN_UP((size_t)bl_size, 8);
 +        size_t fdt_size;
 +
 +        if (fdt_pack(machine->fdt)) {

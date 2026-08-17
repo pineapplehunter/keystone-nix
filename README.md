@@ -97,9 +97,10 @@ nix build .#checks.x86_64-linux.qemu-rom-property --no-link
 nix build .#checks.x86_64-linux.keystone-enclave --no-link
 ```
 
-The enclave test verifies runner argument and initialization failures, an
-enclave execution failure, driver/device setup, and successful hello-world
-output. `nix develop` provides the cross-binutils wrapper and ShellCheck.
+The enclave test boots through the Keystone test boot ROM and security monitor,
+then verifies runner argument and initialization failures, an enclave execution
+failure, driver/device setup, and successful hello-world output. `nix develop`
+provides the cross-binutils wrapper and ShellCheck.
 
 When updating `flake.lock`:
 
@@ -115,7 +116,7 @@ When updating `flake.lock`:
 | --- | --- |
 | Keystone driver, SDK, Eyrie runtime | Built from the pinned source |
 | Hello eapp | Built by Nix and executed in the VM test |
-| Custom QEMU ROM property | Built and property/error paths checked |
+| Custom QEMU ROM property and Keystone boot ROM | Booted by the enclave VM test; property/error paths checked separately |
 | Keystone security monitor | Integrated with OpenSBI 1.1 |
 | Firmware measurement flow | Experimental software simulation with public test keys |
 | Hardware root of trust / production secure boot | Not provided |

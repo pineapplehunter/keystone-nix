@@ -10,6 +10,8 @@ stdenv.mkDerivation {
 
   inherit (keystone) src;
 
+  patches = [ ./dtb-align.patch ];
+
   makeFlags = [
     "-C bootrom"
     "O=$(out)"

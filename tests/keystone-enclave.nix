@@ -15,6 +15,7 @@ let
     overlays = [ overlay ];
   };
 
+  bootrom = hostPkgs.pkgsCross.riscv64-embedded.keystone.bootrom;
   secureMonitor = hostPkgs.pkgsCross.riscv64.keystone.sm;
 
   nixos = import (nixpkgs + "/nixos/lib") {
@@ -69,6 +70,7 @@ in
         memorySize = 4096;
         vlans = [ ];
         qemu.options = [
+          "-machine rom=${bootrom}/bootrom.bin"
           "-bios ${secureMonitor}/platform/generic/firmware/fw_jump.bin"
         ];
       };
