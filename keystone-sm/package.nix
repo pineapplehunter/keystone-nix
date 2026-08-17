@@ -29,6 +29,8 @@ stdenv.mkDerivation {
   ];
   postPatch = ''
     patchShebangs ./opensbi/scripts
+    substituteInPlace ./opensbi/Makefile \
+      --replace-fail $'CFLAGS\t\t=\t-g -Wall' $'CFLAGS\t\t=\t-std=gnu11 -g -Wall'
     substituteInPlace ./keystone/sm/src/thread.{h,c} \
       --replace-warn sbadaddr stval
     (
