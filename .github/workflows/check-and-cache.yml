@@ -11,6 +11,10 @@ on:
 permissions:
   id-token: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  queue: max
+
 jobs:
   build:
     strategy:
@@ -19,6 +23,7 @@ jobs:
           - ubuntu-latest
           - ubuntu-26.04-arm
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 720 # 12 hour
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: wimpysworld/nothing-but-nix@687c797a730352432950c707ab493fcc951818d7 # v10
@@ -36,4 +41,4 @@ jobs:
           niks3-bin: ${{ steps.niks3.outputs.store-path }}/bin/niks3
 
       - name: Run checks
-        run: nix run --inputs-from . nixpkgs#omnix ci
+        run: nix flake check --accept-flake-config
