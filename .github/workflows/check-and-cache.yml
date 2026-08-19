@@ -21,7 +21,9 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - ubuntu-26.04-arm
+          # disabled because the arm runner does not have kvm support
+          # https://github.com/actions/runner-images/issues/14062
+          # - ubuntu-26.04-arm
     runs-on: ${{ matrix.os }}
     timeout-minutes: 720 # 12 hour
     steps:
