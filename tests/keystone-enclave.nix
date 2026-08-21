@@ -42,7 +42,7 @@ testers.nixosTest {
       };
     };
 
-  interactive.qemu.package = lib.mkForce keystone.qemu;
+  interactive.nodes.machine.virtualisation.qemu.options = [ "-device virtio-gpu-pci" ];
 
   testScript =
     let

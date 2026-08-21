@@ -43,6 +43,9 @@ start_all()
 machine.shell_interact()
 ```
 
+After `start_all()`, the QEMU window also displays the guest's `tty0` console;
+`machine.shell_interact()` connects to the separate serial console.
+
 Use <kbd>Ctrl-D</kbd> to leave the guest shell and again to leave the REPL. The
 test driver then shuts down QEMU and removes its temporary state.
 

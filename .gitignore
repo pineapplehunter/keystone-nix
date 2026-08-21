@@ -1,3 +1,4 @@
 /.direnv
 result*
 /todo.md
+/.nixos-test-history
