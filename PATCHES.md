@@ -15,7 +15,7 @@ against a newly pinned revision.
 | `keystone-sm/opensbi-change-basename.patch` | OpenSBI 1.1 | Replace a host `basename` shell call with GNU Make functions for a hermetic cross-build. | Local build-system fix; OpenSBI 1.1 is frozen here for Keystone API compatibility. |
 | `keystone-sm/opensbi-firmware-secure-boot.patch` | OpenSBI 1.1 | Reserve the fixed firmware symbols used by Keystone's software-simulated secure-boot/test-key flow. | Keystone test-platform integration; not suitable as a production root of trust. |
 | `keystone-runtime/package.nix` substitutions | Keystone runtime | Rename the obsolete `sbadaddr` CSR and force non-relaxed/non-PIC loader address materialization. | Local compatibility/layout fixes. |
-| `keystone-sm/package.nix` substitutions | Keystone SM/OpenSBI | Rename `sbadaddr` and select GNU C11 for modern compilers. | Local compatibility fixes. |
+| `keystone-sm/package.nix` substitutions and flags | Keystone SM/OpenSBI | Rename `sbadaddr`, select GNU C11, and move the jump firmware's FDT destination to `0x84000000`: the OpenSBI 1.1 default `0x82200000` overlaps the current >32 MiB Linux Image. | Local compatibility/layout fixes. Recheck kernel/FDT/initrd placement when updating the kernel or QEMU. |
 
 The former `nix-ld-riscv.patch` was removed after RISC-V support landed in
 nix-ld itself. This is why package/check builds must be run after every input

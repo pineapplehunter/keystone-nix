@@ -27,6 +27,9 @@ stdenv.mkDerivation {
     "PLATFORM_RISCV_ISA=rv64imafd_zifencei_zicsr"
     "PLATFORM_RISCV_TOOLCHAIN_DEFAULT=1"
     "FW_PATH=$(out)/platform/generic/firmware"
+    # OpenSBI 1.1 otherwise copies the FDT to 0x82200000, inside today's
+    # >32 MiB Linux Image. Keep it above the kernel and below QEMU's initrd.
+    "FW_JUMP_FDT_ADDR=0x84000000"
   ];
   postPatch = ''
     patchShebangs ./opensbi/scripts
